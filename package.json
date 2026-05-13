@@ -1,0 +1,9 @@
+{
+  "name": "scdp",
+  "version": "1.0.0",
+  "description": "SCDP - Diárias e Passagens",
+  "scripts": {
+    "start": "node backend/server.js",
+    "dev": "cd backend && npm run dev"
+  }
+}

@@ -1,0 +1,1811 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SCDP - Diárias e Passagens</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="sistema_scdp.css">
+</head>
+<body>
+
+<!-- ═══════════════ LOGIN ═══════════════ -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-brasao">
+      <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+        <polyline points="9 22 9 12 15 12 15 22"/>
+      </svg>
+    </div>
+    <h1>SCDP</h1>
+    <p>Sistema de Concessão de Diárias e Passagens</p>
+    <div class="login-error" id="login-error"></div>
+    <div class="field">
+      <label>Usuário</label>
+      <input type="text" id="login-user" placeholder="seu.login" autocomplete="username">
+    </div>
+    <div class="field">
+      <label>Senha</label>
+      <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="btn-login" onclick="doLogin()">Entrar no sistema</button>
+    <div id="login-conn-status" style="margin-top:14px;font-size:12px;color:#6b7280;text-align:center;display:none"></div>
+    <button type="button" onclick="testarConexao()" style="margin-top:8px;width:100%;background:none;border:1px solid #d1d5db;border-radius:6px;padding:8px;font-size:12px;color:#6b7280;cursor:pointer">🔌 Testar conexão</button>
+  </div>
+</div>
+
+<!-- ═══════════════ APP ═══════════════ -->
+<div id="app">
+
+  <div id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+  <!-- Sidebar -->
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div style="text-align:center;font-size:13px;font-weight:700;color:white;letter-spacing:.04em">SCDP</div>
+      <div style="text-align:center;font-size:10px;color:rgba(255,255,255,.45);margin-top:2px;letter-spacing:.05em">DIÁRIAS E PASSAGENS</div>
+    </div>
+
+    <div class="sidebar-nav">
+      <div class="nav-section">Principal</div>
+      <div class="nav-item active" onclick="navigate('dashboard', this)">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="7" height="7" rx="1"/><rect x="11" y="2" width="7" height="7" rx="1"/><rect x="2" y="11" width="7" height="7" rx="1"/><rect x="11" y="11" width="7" height="7" rx="1"/></svg>
+        Painel Geral
+      </div>
+      <div class="nav-item" onclick="navigate('pcdps', this)">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 2h8l4 4v12a2 2 0 01-2 2H4a2 2 0 01-2-2V4a2 2 0 012-2z"/><path d="M12 2v4h4"/><path d="M7 10h6M7 13h4"/></svg>
+        PCDPs
+      </div>
+      <div class="nav-item" onclick="navigate('prestacao', this)">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="16" height="14" rx="2"/><path d="M6 8h8M6 11h5M14 15l2-2-2-2"/></svg>
+        Prestação de Contas
+      </div>
+      <div class="nav-item" onclick="navigate('prazos', this)">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+        Controle de Prazos
+      </div>
+      <div class="nav-section">Administração</div>
+      <div class="nav-item" id="nav-usuarios" onclick="navigate('usuarios', this)">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="6" r="3"/><path d="M2 17a6 6 0 0112 0"/><circle cx="16" cy="8" r="2"/><path d="M16 12a4 4 0 014 4"/></svg>
+        Usuários
+      </div>
+      <div class="nav-item" id="nav-setores" onclick="navigate('setores', this)">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 5h14M3 10h10M3 15h6"/></svg>
+        Setores
+      </div>
+      <div class="nav-item" id="nav-logs" onclick="navigate('logs', this)">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h12v12H4zM4 8h12M8 4v12"/></svg>
+        Logs do Sistema
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="user-pill">
+        <div class="user-avatar" id="user-avatar" style="background:rgba(255,255,255,.2);color:white"></div>
+        <div class="user-info">
+          <strong id="user-name-label">—</strong>
+          <span id="user-role-label">—</span>
+        </div>
+        <button class="btn-logout" onclick="openAlterarSenha()" title="Alterar senha" style="margin-left:4px">
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="8" r="3"/><path d="M10 11v2m-3 4h6a1 1 0 001-1v-2a4 4 0 00-8 0v2a1 1 0 001 1z"/></svg>
+        </button>
+        <button class="btn-logout" onclick="doLogout()" title="Sair">
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 5l5 5-5 5M19 10H8M12 3H4a1 1 0 00-1 1v12a1 1 0 001 1h8"/></svg>
+        </button>
+      </div>
+      <div style="text-align:center;font-size:9px;color:rgba(255,255,255,.25);margin-top:8px;letter-spacing:.03em">Desenvolvido por Fábio Baldas</div>
+    </div>
+  </nav>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="topbar">
+      <button class="sidebar-toggle" onclick="toggleSidebar()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <span class="topbar-title" id="topbar-title">Painel Geral</span>
+      <span class="badge topbar-perfil" id="topbar-perfil"></span>
+      <div class="topbar-right">
+        <span id="topbar-date" style="font-size:12px;color:var(--texto-sec)"></span>
+        <button onclick="toggleAjuda()" title="Ajuda" style="width:32px;height:32px;border-radius:50%;background:var(--azul-medio);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17" stroke-linecap="round" stroke-width="3"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- ══════════ DASHBOARD ══════════ -->
+      <div id="page-dashboard" style="display:block">
+
+        <!-- Alertas -->
+        <div id="dash-alertas"></div>
+
+        <!-- KPIs PCDPs -->
+        <div style="margin-bottom:28px">
+          <div style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:var(--texto);margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid var(--borda)">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="var(--azul-medio)" stroke-width="2"><path d="M4 2h8l4 4v12a2 2 0 01-2 2H4a2 2 0 01-2-2V4a2 2 0 012-2z"/></svg>
+            PCDPs
+          </div>
+          <div class="kpi-grid" id="kpi-pcdps"></div>
+          <div class="dash-grid">
+            <div class="chart-card">
+              <div class="chart-title">Status das PCDPs</div>
+              <div id="chart-status"></div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-title">PCDPs por Setor</div>
+              <div id="chart-setor"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- KPIs Financeiros -->
+        <div style="margin-bottom:28px">
+          <div style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:var(--texto);margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid var(--borda)">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="var(--verde)" stroke-width="2"><circle cx="10" cy="10" r="8"/><path d="M10 6v1m0 6v1M8 8.5A1.5 1.5 0 0110 7h.5A1.5 1.5 0 0112 8.5v0A1.5 1.5 0 0110.5 10h-1A1.5 1.5 0 008 11.5v0A1.5 1.5 0 009.5 13H10a1.5 1.5 0 001.5-1.5"/></svg>
+            Financeiro
+          </div>
+          <div id="kpi-financeiro" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:16px"></div>
+          <div class="chart-card">
+            <div class="chart-title">Gastos por Mês (Diárias + Passagens)</div>
+            <div id="chart-gastos" style="min-height:120px"></div>
+          </div>
+        </div>
+
+        <!-- KPIs Prestação -->
+        <div style="margin-bottom:28px">
+          <div style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:var(--texto);margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid var(--borda)">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="var(--amarelo)" stroke-width="2"><rect x="2" y="3" width="16" height="14" rx="2"/><path d="M6 8h8M6 11h5"/></svg>
+            Prestações de Contas
+          </div>
+          <div id="kpi-prestacao" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px"></div>
+        </div>
+
+      </div>
+
+      <!-- ══════════ PCDPs ══════════ -->
+      <div id="page-pcdps" style="display:none">
+        <div class="card">
+          <div class="card-header">
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="var(--azul-medio)" stroke-width="1.5"><path d="M4 2h8l4 4v12a2 2 0 01-2 2H4a2 2 0 01-2-2V4a2 2 0 012-2z"/></svg>
+            <span class="card-title">PCDPs — Propostas de Concessão</span>
+            <span class="card-count" id="pcdps-count"></span>
+            <button class="btn-novo" onclick="abrirModalPcdp()">
+              <svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="10" y1="4" x2="10" y2="16"/><line x1="4" y1="10" x2="16" y2="10"/></svg>
+              Nova PCDP
+            </button>
+          </div>
+          <div class="filters-bar">
+            <input type="text" id="f-pcdp-busca" placeholder="Buscar por número, servidor, destino..." oninput="renderPcdps()">
+            <select id="f-pcdp-status" onchange="renderPcdps()">
+              <option value="">Todos os status</option>
+              <option>Rascunho</option>
+              <option>Aguardando Aprovação</option>
+              <option>Aprovada</option>
+              <option>Rejeitada</option>
+              <option>Em Viagem</option>
+              <option>Prestação de Contas</option>
+              <option>Finalizada</option>
+              <option>Cancelada</option>
+            </select>
+            <select id="f-pcdp-setor" onchange="renderPcdps()">
+              <option value="">Todos os setores</option>
+            </select>
+            <select id="f-pcdp-tipo" onchange="renderPcdps()">
+              <option value="">Todos os tipos</option>
+              <option>Diárias</option>
+              <option>Passagens</option>
+              <option>Diárias e Passagens</option>
+            </select>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Número</th>
+                  <th>Servidor</th>
+                  <th>Setor</th>
+                  <th>Destino</th>
+                  <th>Saída</th>
+                  <th>Retorno</th>
+                  <th>Tipo</th>
+                  <th>Valor Total</th>
+                  <th>Status</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-pcdps"></tbody>
+            </table>
+          </div>
+          <div class="empty-state" id="empty-pcdps" style="display:none">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1"><path d="M4 2h8l4 4v12a2 2 0 01-2 2H4a2 2 0 01-2-2V4a2 2 0 012-2z"/></svg>
+            <p>Nenhuma PCDP encontrada</p>
+          </div>
+          <div class="pagination-bar">
+            <button class="btn-page" id="btn-pcdp-prev" onclick="pagPcdp--; renderPcdps()">← Anterior</button>
+            <button class="btn-page" id="btn-pcdp-next" onclick="pagPcdp++; renderPcdps()">Próximo →</button>
+            <span class="page-info" id="pag-pcdp-info"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════ PRESTAÇÃO ══════════ -->
+      <div id="page-prestacao" style="display:none">
+        <div class="card">
+          <div class="card-header">
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="var(--azul-medio)" stroke-width="1.5"><rect x="2" y="3" width="16" height="14" rx="2"/><path d="M6 8h8M6 11h5"/></svg>
+            <span class="card-title">Prestações de Contas</span>
+            <span class="card-count" id="prest-count"></span>
+          </div>
+          <div class="filters-bar">
+            <input type="text" id="f-prest-busca" placeholder="Buscar por PCDP, servidor..." oninput="renderPrestacoes()">
+            <select id="f-prest-status" onchange="renderPrestacoes()">
+              <option value="">Todos os status</option>
+              <option>Pendente</option>
+              <option>Em análise</option>
+              <option>Aprovada</option>
+              <option>Com pendências</option>
+            </select>
+            <select id="f-prest-setor" onchange="renderPrestacoes()">
+              <option value="">Todos os setores</option>
+            </select>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>PCDP</th>
+                  <th>Servidor</th>
+                  <th>Setor</th>
+                  <th>Retorno</th>
+                  <th>Prazo</th>
+                  <th>Valor Pago</th>
+                  <th>Valor Gasto</th>
+                  <th>Saldo</th>
+                  <th>Status</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-prestacoes"></tbody>
+            </table>
+          </div>
+          <div class="empty-state" id="empty-prestacoes" style="display:none">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1"><rect x="2" y="3" width="16" height="14" rx="2"/></svg>
+            <p>Nenhuma prestação de contas encontrada</p>
+          </div>
+          <div class="pagination-bar">
+            <button class="btn-page" id="btn-prest-prev" onclick="pagPrest--; renderPrestacoes()">← Anterior</button>
+            <button class="btn-page" id="btn-prest-next" onclick="pagPrest++; renderPrestacoes()">Próximo →</button>
+            <span class="page-info" id="pag-prest-info"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════ PRAZOS ══════════ -->
+      <div id="page-prazos" style="display:none">
+        <div class="card">
+          <div class="card-header">
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="var(--azul-medio)" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+            <span class="card-title">Controle de Prazos</span>
+            <span class="card-count" id="prazos-count"></span>
+            <button class="btn-secondary" style="margin-left:auto" onclick="carregarPrazos()">
+              <svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4v5h5M16 16v-5h-5"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10m18 0l-4.64 4.36A9 9 0 013.51 11"/></svg>
+              Atualizar
+            </button>
+          </div>
+          <div style="padding:20px">
+            <div class="prazo-list" id="prazo-list"></div>
+            <div class="empty-state" id="empty-prazos" style="display:none">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+              <p>Nenhum prazo crítico no momento</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════ USUÁRIOS ══════════ -->
+      <div id="page-usuarios" style="display:none">
+        <div class="card">
+          <div class="card-header">
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="var(--azul-medio)" stroke-width="1.5"><circle cx="8" cy="6" r="3"/><path d="M2 17a6 6 0 0112 0"/></svg>
+            <span class="card-title">Usuários do Sistema</span>
+            <span class="card-count" id="usuarios-count"></span>
+            <button class="btn-novo" onclick="abrirModalUsuario()">
+              <svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="10" y1="4" x2="10" y2="16"/><line x1="4" y1="10" x2="16" y2="10"/></svg>
+              Novo Usuário
+            </button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th>Login</th>
+                  <th>Setor</th>
+                  <th>Perfil</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-usuarios"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════ SETORES ══════════ -->
+      <div id="page-setores" style="display:none">
+        <div class="card">
+          <div class="card-header">
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="var(--azul-medio)" stroke-width="1.5"><path d="M3 5h14M3 10h10M3 15h6"/></svg>
+            <span class="card-title">Setores Cadastrados</span>
+          </div>
+          <div style="padding:20px">
+            <div id="setores-lista" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px"></div>
+            <div style="display:flex;gap:10px;align-items:center">
+              <input type="text" id="setor-novo-input" placeholder="Nome do novo setor" class="form-input" style="max-width:320px;margin-top:0" onkeydown="if(event.key==='Enter')adicionarSetor()">
+              <button class="btn-primary" onclick="adicionarSetor()">Adicionar</button>
+            </div>
+            <div style="margin-top:16px">
+              <button class="btn-secondary" onclick="salvarSetores()">Salvar alterações</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════ LOGS ══════════ -->
+      <div id="page-logs" style="display:none">
+        <div class="card">
+          <div class="card-header">
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="var(--azul-medio)" stroke-width="1.5"><path d="M4 4h12v12H4zM4 8h12M8 4v12"/></svg>
+            <span class="card-title">Logs do Sistema</span>
+            <span class="card-count" id="logs-count"></span>
+          </div>
+          <div class="filters-bar">
+            <input type="text" id="f-log-busca" placeholder="Filtrar logs..." oninput="renderLogs()">
+            <select id="f-log-tipo" onchange="renderLogs()">
+              <option value="">Todos os tipos</option>
+              <option>auth</option>
+              <option>pcdp</option>
+              <option>prestacao</option>
+              <option>usuario</option>
+              <option>config</option>
+            </select>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Data/Hora</th>
+                  <th>Usuário</th>
+                  <th>Tipo</th>
+                  <th>Ação</th>
+                  <th>Detalhe</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-logs"></tbody>
+            </table>
+          </div>
+          <div class="empty-state" id="empty-logs" style="display:none">
+            <p>Nenhum log encontrado</p>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<!-- ═══════════════ PAINEL AJUDA ═══════════════ -->
+<div id="ajuda-painel" style="position:fixed;top:calc(var(--header-h) + 8px);right:24px;width:300px;max-height:500px;background:white;border:1px solid var(--borda);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.15);z-index:799;display:none;flex-direction:column;overflow:hidden">
+  <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--borda);background:linear-gradient(135deg,var(--azul-claro),white)">
+    <strong style="font-size:13px">Ajuda — SCDP</strong>
+    <button onclick="toggleAjuda()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--texto-sec)">×</button>
+  </div>
+  <div style="overflow-y:auto;padding:12px 16px 16px;font-size:13px;color:var(--texto-sec);line-height:1.7">
+    <strong style="display:block;color:var(--texto);margin-bottom:6px">Status da PCDP</strong>
+    <p>🟡 <b>Rascunho</b> — em elaboração</p>
+    <p>🟠 <b>Aguardando Aprovação</b> — submetida ao aprovador</p>
+    <p>🟢 <b>Aprovada</b> — autorizada para viagem</p>
+    <p>🔴 <b>Rejeitada</b> — não autorizada</p>
+    <p>🟣 <b>Em Viagem</b> — servidor em deslocamento</p>
+    <p>🟤 <b>Prestação de Contas</b> — aguarda comprovantes</p>
+    <p>🔵 <b>Finalizada</b> — prestação aprovada</p>
+    <p>⚫ <b>Cancelada</b> — PCDP cancelada</p>
+    <strong style="display:block;color:var(--texto);margin:12px 0 6px">Fluxo recomendado</strong>
+    <p>Rascunho → Aguardando → Aprovada → Em Viagem → Prestação de Contas → Finalizada</p>
+    <strong style="display:block;color:var(--texto);margin:12px 0 6px">Saldo da Prestação</strong>
+    <p>🔴 Positivo = servidor deve devolver ao erário</p>
+    <p>🟢 Negativo = erário deve complementar ao servidor</p>
+  </div>
+</div>
+
+<!-- ═══════════════ TOAST ═══════════════ -->
+<div class="toast" id="toast"></div>
+
+<!-- ═══════════════ MODAL PCDP ═══════════════ -->
+<div class="modal-overlay" id="modal-pcdp">
+  <div class="modal-box modal-lg">
+    <div class="modal-head">
+      <h3 id="modal-pcdp-titulo">Nova PCDP</h3>
+      <button class="modal-close" onclick="fecharModal('modal-pcdp')">×</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="form-section">Dados do Servidor</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Nome do Servidor *</label>
+          <input type="text" id="pcdp-servidor" class="form-input" placeholder="Nome completo">
+        </div>
+        <div class="form-group">
+          <label>Matrícula</label>
+          <input type="text" id="pcdp-matricula" class="form-input" placeholder="000000">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Cargo</label>
+          <input type="text" id="pcdp-cargo" class="form-input" placeholder="Cargo do servidor">
+        </div>
+        <div class="form-group">
+          <label>Setor *</label>
+          <select id="pcdp-setor" class="form-input"></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>CPF</label>
+          <input type="text" id="pcdp-cpf" class="form-input" placeholder="000.000.000-00" maxlength="14">
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select id="pcdp-status" class="form-input">
+            <option>Rascunho</option>
+            <option>Aguardando Aprovação</option>
+            <option>Aprovada</option>
+            <option>Rejeitada</option>
+            <option>Em Viagem</option>
+            <option>Prestação de Contas</option>
+            <option>Finalizada</option>
+            <option>Cancelada</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-section">Dados da Viagem</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Destino *</label>
+          <input type="text" id="pcdp-destino" class="form-input" placeholder="Cidade — UF">
+        </div>
+        <div class="form-group">
+          <label>País</label>
+          <input type="text" id="pcdp-pais" class="form-input" value="Brasil">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Data de Saída *</label>
+          <input type="text" id="pcdp-data-saida" class="form-input" placeholder="DD/MM/AAAA" maxlength="10">
+        </div>
+        <div class="form-group">
+          <label>Data de Retorno *</label>
+          <input type="text" id="pcdp-data-retorno" class="form-input" placeholder="DD/MM/AAAA" maxlength="10">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Motivo da Viagem *</label>
+          <input type="text" id="pcdp-motivo" class="form-input" placeholder="Ex: Participação em capacitação">
+        </div>
+        <div class="form-group">
+          <label>Nome do Evento / Objeto</label>
+          <input type="text" id="pcdp-evento" class="form-input" placeholder="Ex: Seminário Nacional de Gestão">
+        </div>
+      </div>
+
+      <div class="form-section">Tipo e Transporte</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Tipo de Concessão *</label>
+          <select id="pcdp-tipo" class="form-input" onchange="toggleCamposFinanceiros()">
+            <option>Diárias e Passagens</option>
+            <option>Diárias</option>
+            <option>Passagens</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Meio de Transporte</label>
+          <select id="pcdp-transporte" class="form-input">
+            <option>Aéreo</option>
+            <option>Rodoviário</option>
+            <option>Veículo Próprio</option>
+            <option>Não se aplica</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-section">Valores</div>
+      <div class="form-row-3" id="campos-diarias">
+        <div class="form-group">
+          <label>Nº de Diárias</label>
+          <input type="number" id="pcdp-num-diarias" class="form-input" min="0" step="0.5" placeholder="0" oninput="calcularTotal()">
+        </div>
+        <div class="form-group">
+          <label>Valor Unitário (R$)</label>
+          <input type="number" id="pcdp-valor-diaria" class="form-input" min="0" step="0.01" placeholder="0,00" oninput="calcularTotal()">
+        </div>
+        <div class="form-group">
+          <label>Total Diárias (R$)</label>
+          <input type="number" id="pcdp-valor-diarias" class="form-input" min="0" step="0.01" placeholder="0,00" readonly style="background:var(--cinza)">
+        </div>
+      </div>
+      <div class="form-row" id="campos-passagens">
+        <div class="form-group">
+          <label>Valor Passagens (R$)</label>
+          <input type="number" id="pcdp-valor-passagens" class="form-input" min="0" step="0.01" placeholder="0,00" oninput="calcularTotal()">
+        </div>
+        <div class="form-group">
+          <label>Valor Total (R$)</label>
+          <input type="number" id="pcdp-valor-total" class="form-input" min="0" step="0.01" placeholder="0,00" readonly style="background:var(--cinza)">
+        </div>
+      </div>
+
+      <div class="form-section">Informações Adicionais</div>
+      <div class="form-row-full">
+        <div class="form-group">
+          <label>Observações</label>
+          <textarea id="pcdp-obs" class="form-input" rows="3" placeholder="Observações gerais..."></textarea>
+        </div>
+      </div>
+      <div class="form-row-full">
+        <div class="form-group">
+          <label>Andamento / Histórico</label>
+          <textarea id="pcdp-andamento" class="form-input" rows="3" placeholder="Registro de andamentos..."></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="fecharModal('modal-pcdp')">Cancelar</button>
+      <button class="btn-primary" onclick="salvarPcdp()">
+        <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3H5a2 2 0 00-2 2v14l4-2 3 2 3-2 4 2V5a2 2 0 00-2-2z"/></svg>
+        Salvar PCDP
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ MODAL DETALHES PCDP ═══════════════ -->
+<div class="modal-overlay" id="modal-det-pcdp">
+  <div class="modal-box modal-lg">
+    <div class="modal-head">
+      <div>
+        <h3 id="det-pcdp-numero" style="font-size:16px"></h3>
+        <div id="det-pcdp-status-badge" style="margin-top:4px"></div>
+      </div>
+      <button class="modal-close" onclick="fecharModal('modal-det-pcdp')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="detail-section">Servidor</div>
+      <div class="detail-grid">
+        <div><div class="detail-label">Nome</div><div class="detail-value" id="det-servidor"></div></div>
+        <div><div class="detail-label">Matrícula</div><div class="detail-value" id="det-matricula"></div></div>
+        <div><div class="detail-label">Cargo</div><div class="detail-value" id="det-cargo"></div></div>
+        <div><div class="detail-label">Setor</div><div class="detail-value" id="det-setor"></div></div>
+        <div><div class="detail-label">CPF</div><div class="detail-value" id="det-cpf"></div></div>
+      </div>
+      <div class="detail-section">Viagem</div>
+      <div class="detail-grid">
+        <div><div class="detail-label">Destino</div><div class="detail-value" id="det-destino"></div></div>
+        <div><div class="detail-label">País</div><div class="detail-value" id="det-pais"></div></div>
+        <div><div class="detail-label">Data de Saída</div><div class="detail-value" id="det-saida"></div></div>
+        <div><div class="detail-label">Data de Retorno</div><div class="detail-value" id="det-retorno"></div></div>
+        <div><div class="detail-label">Motivo</div><div class="detail-value" id="det-motivo"></div></div>
+        <div><div class="detail-label">Evento</div><div class="detail-value" id="det-evento"></div></div>
+        <div><div class="detail-label">Tipo de Concessão</div><div class="detail-value" id="det-tipo"></div></div>
+        <div><div class="detail-label">Meio de Transporte</div><div class="detail-value" id="det-transporte"></div></div>
+      </div>
+      <div class="detail-section">Valores</div>
+      <div class="detail-grid-3">
+        <div><div class="detail-label">Nº de Diárias</div><div class="detail-value" id="det-num-diarias"></div></div>
+        <div><div class="detail-label">Total Diárias</div><div class="detail-value" id="det-valor-diarias"></div></div>
+        <div><div class="detail-label">Passagens</div><div class="detail-value" id="det-valor-passagens"></div></div>
+        <div><div class="detail-label">Valor Total</div><div class="detail-value" id="det-valor-total" style="font-weight:600;color:var(--azul-medio)"></div></div>
+        <div><div class="detail-label">Prazo Prestação</div><div class="detail-value" id="det-prazo-prest"></div></div>
+        <div><div class="detail-label">Autorizado por</div><div class="detail-value" id="det-autorizado"></div></div>
+      </div>
+      <div id="det-rejeicao-bloco" style="display:none;margin-top:12px;background:var(--vermelho-claro);border:1px solid #e8b0b0;border-radius:8px;padding:12px 14px">
+        <div class="detail-label" style="color:var(--vermelho)">Motivo da Rejeição</div>
+        <div class="detail-value" id="det-motivo-rejeicao"></div>
+      </div>
+      <div class="detail-section">Observações / Andamento</div>
+      <div id="det-obs" style="font-size:13px;color:var(--texto-sec);margin-bottom:10px;white-space:pre-wrap"></div>
+      <div id="det-andamento" style="font-size:12px;color:var(--texto-sec);white-space:pre-wrap;background:var(--cinza);border-radius:8px;padding:12px 14px;font-family:'DM Mono',monospace"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="editarPcdpCorrente()">Editar</button>
+      <div id="det-acoes-status" style="display:flex;gap:8px;flex-wrap:wrap;margin-left:auto"></div>
+      <button class="modal-close btn-cancel" onclick="fecharModal('modal-det-pcdp')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ MODAL REJEITAR ═══════════════ -->
+<div class="modal-overlay" id="modal-rejeitar">
+  <div class="modal-box modal-sm">
+    <div class="modal-head">
+      <h3>Rejeitar PCDP</h3>
+      <button class="modal-close" onclick="fecharModal('modal-rejeitar')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label style="font-size:12px;font-weight:500;color:var(--texto-sec);text-transform:uppercase;letter-spacing:.04em">Motivo da Rejeição *</label>
+        <textarea id="motivo-rejeicao" class="form-input" rows="4" placeholder="Descreva o motivo da rejeição..." style="margin-top:6px"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="fecharModal('modal-rejeitar')">Cancelar</button>
+      <button class="btn-danger" onclick="confirmarRejeicao()">Confirmar Rejeição</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ MODAL PRESTAÇÃO ═══════════════ -->
+<div class="modal-overlay" id="modal-prestacao">
+  <div class="modal-box modal-lg">
+    <div class="modal-head">
+      <h3 id="modal-prest-titulo">Prestação de Contas</h3>
+      <button class="modal-close" onclick="fecharModal('modal-prestacao')">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:var(--azul-claro);border:1px solid var(--azul-borda);border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:13px">
+        <strong>PCDP:</strong> <span id="prest-pcdp-numero"></span> &nbsp;|&nbsp;
+        <strong>Servidor:</strong> <span id="prest-servidor"></span> &nbsp;|&nbsp;
+        <strong>Retorno:</strong> <span id="prest-data-retorno"></span>
+      </div>
+      <div class="form-section">Valores Pagos ao Servidor</div>
+      <div class="form-row-3">
+        <div class="form-group">
+          <label>Diárias Pagas (R$)</label>
+          <input type="number" id="prest-val-diarias-pagas" class="form-input" min="0" step="0.01" placeholder="0,00" oninput="calcularPrestacao()">
+        </div>
+        <div class="form-group">
+          <label>Passagens Pagas (R$)</label>
+          <input type="number" id="prest-val-passagens-pagas" class="form-input" min="0" step="0.01" placeholder="0,00" oninput="calcularPrestacao()">
+        </div>
+        <div class="form-group">
+          <label>Total Pago (R$)</label>
+          <input type="number" id="prest-val-total-pago" class="form-input" min="0" step="0.01" placeholder="0,00" readonly style="background:var(--cinza)">
+        </div>
+      </div>
+      <div class="form-section">Valores Efetivamente Gastos</div>
+      <div class="form-row-3">
+        <div class="form-group">
+          <label>Gasto em Diárias (R$)</label>
+          <input type="number" id="prest-val-gasto-diarias" class="form-input" min="0" step="0.01" placeholder="0,00" oninput="calcularPrestacao()">
+        </div>
+        <div class="form-group">
+          <label>Gasto em Passagens (R$)</label>
+          <input type="number" id="prest-val-gasto-passagens" class="form-input" min="0" step="0.01" placeholder="0,00" oninput="calcularPrestacao()">
+        </div>
+        <div class="form-group">
+          <label>Outros Gastos (R$)</label>
+          <input type="number" id="prest-val-gasto-outros" class="form-input" min="0" step="0.01" placeholder="0,00" oninput="calcularPrestacao()">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Total Gasto (R$)</label>
+          <input type="number" id="prest-val-total-gasto" class="form-input" readonly style="background:var(--cinza)">
+        </div>
+        <div class="form-group">
+          <label>Saldo (R$)</label>
+          <input type="number" id="prest-saldo" class="form-input" readonly style="background:var(--cinza);font-weight:600">
+          <div id="prest-saldo-desc" style="font-size:11px;margin-top:4px;color:var(--texto-sec)"></div>
+        </div>
+      </div>
+      <div class="form-section">Status e Observações</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Status da Prestação</label>
+          <select id="prest-status" class="form-input">
+            <option>Pendente</option>
+            <option>Em análise</option>
+            <option>Aprovada</option>
+            <option>Com pendências</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row-full">
+        <div class="form-group">
+          <label>Observações</label>
+          <textarea id="prest-obs" class="form-input" rows="3" placeholder="Pendências, comprovantes solicitados, etc."></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="fecharModal('modal-prestacao')">Cancelar</button>
+      <button class="btn-primary" onclick="salvarPrestacao()">Salvar Prestação</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ MODAL USUÁRIO ═══════════════ -->
+<div class="modal-overlay" id="modal-usuario">
+  <div class="modal-box modal-sm">
+    <div class="modal-head">
+      <h3 id="modal-usuario-titulo">Novo Usuário</h3>
+      <button class="modal-close" onclick="fecharModal('modal-usuario')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row-full" style="margin-bottom:12px">
+        <div class="form-group">
+          <label style="font-size:12px;font-weight:500;color:var(--texto-sec);text-transform:uppercase;letter-spacing:.04em">Nome *</label>
+          <input type="text" id="usr-nome" class="form-input" placeholder="Nome completo" style="margin-top:5px">
+        </div>
+      </div>
+      <div class="form-row-full" style="margin-bottom:12px">
+        <div class="form-group">
+          <label style="font-size:12px;font-weight:500;color:var(--texto-sec);text-transform:uppercase;letter-spacing:.04em">Login *</label>
+          <input type="text" id="usr-login" class="form-input" placeholder="login.usuario" style="margin-top:5px">
+        </div>
+      </div>
+      <div class="form-row-full" style="margin-bottom:12px">
+        <div class="form-group">
+          <label style="font-size:12px;font-weight:500;color:var(--texto-sec);text-transform:uppercase;letter-spacing:.04em">Senha <span id="usr-senha-label">(obrigatório)</span></label>
+          <input type="password" id="usr-senha" class="form-input" placeholder="Mínimo 6 caracteres" style="margin-top:5px">
+        </div>
+      </div>
+      <div class="form-row-full" style="margin-bottom:12px">
+        <div class="form-group">
+          <label style="font-size:12px;font-weight:500;color:var(--texto-sec);text-transform:uppercase;letter-spacing:.04em">Perfil</label>
+          <select id="usr-perfil" class="form-input" style="margin-top:5px">
+            <option value="visualizador">Visualizador</option>
+            <option value="admin">Administrador</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row-full" style="margin-bottom:0">
+        <div class="form-group">
+          <label style="font-size:12px;font-weight:500;color:var(--texto-sec);text-transform:uppercase;letter-spacing:.04em">Setor</label>
+          <select id="usr-setor" class="form-input" style="margin-top:5px"></select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="fecharModal('modal-usuario')">Cancelar</button>
+      <button class="btn-primary" onclick="salvarUsuario()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ MODAL ALTERAR SENHA ═══════════════ -->
+<div class="modal-overlay" id="modal-alterar-senha">
+  <div class="modal-box modal-sm">
+    <div class="modal-head">
+      <h3>Alterar Senha</h3>
+      <button class="modal-close" onclick="fecharModal('modal-alterar-senha')">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="margin-bottom:12px">
+        <label style="font-size:12px;font-weight:500;color:var(--texto-sec);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:5px">Senha Atual</label>
+        <input type="password" id="senha-atual" class="form-input" placeholder="••••••••">
+      </div>
+      <div style="margin-bottom:12px">
+        <label style="font-size:12px;font-weight:500;color:var(--texto-sec);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:5px">Nova Senha</label>
+        <input type="password" id="senha-nova" class="form-input" placeholder="Mínimo 6 caracteres">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:500;color:var(--texto-sec);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:5px">Confirmar Nova Senha</label>
+        <input type="password" id="senha-confirma" class="form-input" placeholder="Repita a nova senha">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="fecharModal('modal-alterar-senha')">Cancelar</button>
+      <button class="btn-primary" onclick="salvarSenha()">Alterar Senha</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════ JAVASCRIPT ════════════════════════ -->
+<script>
+// ── Estado global ──────────────────────────────────────────
+let usuarioAtual = null;
+let pcdpsData = [];
+let prestacoesData = [];
+let usuariosData = [];
+let setoresData = [];
+let logsData = [];
+let pagPcdp = 1;
+let pagPrest = 1;
+const PER_PAGE = 20;
+
+// PCDP em edição/detalhes corrente
+let pcdpCorrente = null;
+let prestacaoCorrente = null;
+let usuarioEditId = null;
+let idParaRejeitar = null;
+
+// ── API ────────────────────────────────────────────────────
+async function api(method, path, body) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin' };
+  if (body !== undefined) opts.body = JSON.stringify(body);
+  const r = await fetch(path, opts);
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.erro || `Erro ${r.status}`);
+  return data;
+}
+
+// ── Utilitários ────────────────────────────────────────────
+function toast(msg, dur = 3000) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  setTimeout(() => t.style.display = 'none', dur);
+}
+
+function formatBRL(v) {
+  if (v == null || isNaN(v)) return '—';
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
+}
+
+function abrirModal(id) { document.getElementById(id).classList.add('open'); }
+function fecharModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function maskData(input) {
+  let v = input.value.replace(/\D/g, '').slice(0, 8);
+  if (v.length > 4) v = v.slice(0,2) + '/' + v.slice(2,4) + '/' + v.slice(4);
+  else if (v.length > 2) v = v.slice(0,2) + '/' + v.slice(2);
+  input.value = v;
+}
+
+function toggleAjuda() {
+  const p = document.getElementById('ajuda-painel');
+  p.style.display = p.style.display === 'flex' ? 'none' : 'flex';
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('mobile-open');
+  document.getElementById('sidebar-overlay').classList.toggle('open');
+}
+
+// ── Navegação ──────────────────────────────────────────────
+function navigate(page, el) {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  if (el) el.classList.add('active');
+  document.querySelectorAll('[id^="page-"]').forEach(p => p.style.display = 'none');
+  const pg = document.getElementById('page-' + page);
+  if (pg) pg.style.display = 'block';
+
+  const titulos = {
+    dashboard: 'Painel Geral', pcdps: 'PCDPs', prestacao: 'Prestação de Contas',
+    prazos: 'Controle de Prazos', usuarios: 'Usuários', setores: 'Setores', logs: 'Logs do Sistema',
+  };
+  document.getElementById('topbar-title').textContent = titulos[page] || page;
+
+  if (page === 'dashboard') carregarDashboard();
+  if (page === 'pcdps') carregarPcdps();
+  if (page === 'prestacao') carregarPrestacoes();
+  if (page === 'prazos') carregarPrazos();
+  if (page === 'usuarios') carregarUsuarios();
+  if (page === 'setores') carregarSetores();
+  if (page === 'logs') carregarLogs();
+
+  document.getElementById('sidebar').classList.remove('mobile-open');
+  document.getElementById('sidebar-overlay').classList.remove('open');
+}
+
+// ── Auth ───────────────────────────────────────────────────
+async function doLogin() {
+  const login = document.getElementById('login-user').value.trim();
+  const senha = document.getElementById('login-pass').value;
+  const err = document.getElementById('login-error');
+  err.style.display = 'none';
+  try {
+    const r = await api('POST', '/api/login', { login, senha });
+    usuarioAtual = r.usuario;
+    iniciarApp();
+  } catch (e) {
+    err.textContent = e.message;
+    err.style.display = 'block';
+  }
+}
+
+document.getElementById('login-pass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+document.getElementById('login-user').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+async function doLogout() {
+  await api('POST', '/api/logout');
+  location.reload();
+}
+
+async function testarConexao() {
+  const el = document.getElementById('login-conn-status');
+  el.style.display = 'block';
+  el.textContent = 'Testando...';
+  try {
+    const r = await api('GET', '/api/health');
+    el.textContent = r.ok ? '✅ Servidor conectado' : '⚠️ Servidor online, banco: ' + r.db;
+  } catch (e) {
+    el.textContent = '❌ Sem conexão com o servidor';
+  }
+}
+
+async function verificarSessao() {
+  try {
+    const u = await api('GET', '/api/me');
+    usuarioAtual = u;
+    iniciarApp();
+  } catch (e) {
+    document.getElementById('login-screen').style.display = 'flex';
+  }
+}
+
+function iniciarApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+
+  const u = usuarioAtual;
+  document.getElementById('user-name-label').textContent = u.nome;
+  document.getElementById('user-role-label').textContent = u.perfil === 'admin' ? 'Administrador' : 'Visualizador';
+  document.getElementById('user-avatar').textContent = u.nome.charAt(0).toUpperCase();
+  document.getElementById('user-avatar').style.background = u.cor || '#2563eb';
+  const perfil = document.getElementById('topbar-perfil');
+  perfil.textContent = u.perfil === 'admin' ? 'Admin' : 'Visualizador';
+  perfil.className = `badge topbar-perfil ${u.perfil === 'admin' ? 'tag-perfil-admin' : 'tag-perfil-view'}`;
+
+  // Oculta itens admin para visualizador
+  if (u.perfil !== 'admin') {
+    ['nav-usuarios','nav-setores','nav-logs'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    });
+  }
+
+  // Data no topbar
+  const atualizarData = () => {
+    document.getElementById('topbar-date').textContent = new Date().toLocaleDateString('pt-BR', { weekday:'short', day:'2-digit', month:'short', year:'numeric' });
+  };
+  atualizarData();
+  setInterval(atualizarData, 60000);
+
+  // Adicionar máscaras de data
+  ['pcdp-data-saida','pcdp-data-retorno'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', function() { maskData(this); });
+  });
+
+  carregarDashboard();
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────
+async function carregarDashboard() {
+  try {
+    const d = await api('GET', '/api/dashboard');
+    renderDashboard(d);
+  } catch (e) { console.error(e); }
+}
+
+function renderDashboard(d) {
+  const k = d.kpis;
+  const g = d.graficos;
+  const a = d.alertas;
+
+  // Alertas
+  const alertasEl = document.getElementById('dash-alertas');
+  alertasEl.innerHTML = '';
+  if (a.aguardando.length > 0) {
+    alertasEl.innerHTML += `<div class="alert-box warn">⏳ <div><strong>${a.aguardando.length} PCDP(s) aguardando aprovação</strong> — Verifique a aba PCDPs.</div></div>`;
+  }
+  if (a.prestacao.length > 0) {
+    const vencidas = a.prestacao.filter(p => p.dias < 0);
+    const vencendo = a.prestacao.filter(p => p.dias >= 0);
+    if (vencidas.length) alertasEl.innerHTML += `<div class="alert-box danger">🚨 <div><strong>${vencidas.length} prestação(ões) vencida(s)</strong> — Regularize imediatamente.</div></div>`;
+    if (vencendo.length) alertasEl.innerHTML += `<div class="alert-box warn">⚠️ <div><strong>${vencendo.length} prestação(ões) vencendo em até 5 dias</strong> — Providencie os comprovantes.</div></div>`;
+  }
+
+  // KPIs PCDPs
+  document.getElementById('kpi-pcdps').innerHTML = `
+    ${kpiCard('Total de PCDPs', k.total, 'azul', 'Todas as propostas')}
+    ${kpiCard('Aguardando', k.aguardando, 'amarelo', 'Pendentes de aprovação')}
+    ${kpiCard('Aprovadas', k.aprovadas, 'verde', 'Autorizadas')}
+    ${kpiCard('Em Viagem', k.em_viagem, 'roxo', 'Em deslocamento')}
+    ${kpiCard('Prestação', k.prestando, 'amarelo', 'Aguardando comprovantes')}
+  `;
+
+  // KPIs Financeiro
+  document.getElementById('kpi-financeiro').innerHTML = `
+    ${kpiCard('Total Diárias', formatBRL(k.total_diarias), 'verde', 'Soma de diárias aprovadas')}
+    ${kpiCard('Total Passagens', formatBRL(k.total_passagens), 'azul', 'Soma de passagens aprovadas')}
+    ${kpiCard('Total Geral', formatBRL(k.total_valor), 'roxo', 'Diárias + Passagens')}
+  `;
+
+  // KPIs Prestação
+  document.getElementById('kpi-prestacao').innerHTML = `
+    ${kpiCard('Pendentes', k.prest_pendentes, 'amarelo', 'Aguardando comprovantes')}
+    ${kpiCard('Em Análise', k.prest_analise, 'roxo', 'Em verificação')}
+    ${kpiCard('Com Pendências', k.prest_pendencias, 'vermelho', 'Comprovantes insuficientes')}
+    ${kpiCard('Aprovadas', k.prest_aprovadas, 'verde', 'Quitadas')}
+  `;
+
+  // Gráfico status (donut simplificado com barras)
+  const statusEl = document.getElementById('chart-status');
+  if (g.por_status.length === 0) {
+    statusEl.innerHTML = '<div class="empty-state" style="padding:20px"><p>Sem dados</p></div>';
+  } else {
+    const total = g.por_status.reduce((s, x) => s + x.qtd, 0);
+    statusEl.innerHTML = `<div class="donut-legend">` +
+      g.por_status.map(x => `
+        <div class="legend-item">
+          <div class="legend-dot" style="background:${x.cor}"></div>
+          <div class="legend-label">${x.status}</div>
+          <div class="legend-val">${x.qtd} <span style="color:var(--texto-ter);font-size:11px">(${Math.round(x.qtd/total*100)}%)</span></div>
+        </div>
+        <div class="bar-track" style="margin:-4px 0 6px 18px"><div class="bar-fill" style="width:${x.qtd/total*100}%;background:${x.cor}"></div></div>
+      `).join('') + '</div>';
+  }
+
+  // Gráfico por setor
+  const setorEl = document.getElementById('chart-setor');
+  if (g.por_setor.length === 0) {
+    setorEl.innerHTML = '<div class="empty-state" style="padding:20px"><p>Sem dados</p></div>';
+  } else {
+    const max = Math.max(...g.por_setor.map(x => x.qtd));
+    setorEl.innerHTML = g.por_setor.map(x => `
+      <div class="bar-item">
+        <div class="bar-name">${x.setor}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${x.qtd/max*100}%;background:var(--azul-medio)"></div></div>
+        <div class="bar-num">${x.qtd}</div>
+      </div>
+    `).join('');
+  }
+
+  // Gráfico gastos por mês
+  const gastosEl = document.getElementById('chart-gastos');
+  if (g.gastos_por_mes.length === 0) {
+    gastosEl.innerHTML = '<div class="empty-state" style="padding:20px"><p>Sem dados de gastos por mês</p></div>';
+  } else {
+    const maxGasto = Math.max(...g.gastos_por_mes.map(x => x.total));
+    gastosEl.innerHTML = `<div style="display:flex;flex-direction:column;gap:6px">` +
+      g.gastos_por_mes.map(m => `
+        <div style="display:flex;align-items:center;gap:10px;font-size:12px">
+          <div style="width:60px;text-align:right;color:var(--texto-sec);flex-shrink:0">${m.mes}</div>
+          <div style="flex:1;height:20px;background:var(--cinza);border-radius:4px;overflow:hidden;display:flex">
+            <div style="height:100%;background:#2563eb;width:${maxGasto > 0 ? m.diarias/maxGasto*100 : 0}%;transition:width .4s"></div>
+            <div style="height:100%;background:#10b981;width:${maxGasto > 0 ? m.passagens/maxGasto*100 : 0}%;transition:width .4s"></div>
+          </div>
+          <div style="width:90px;font-family:'DM Mono',monospace;font-size:11px;color:var(--texto-sec)">${formatBRL(m.total)}</div>
+        </div>
+      `).join('') +
+      '</div><div style="display:flex;gap:14px;margin-top:10px;font-size:11px">' +
+      '<span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;background:#2563eb;border-radius:2px;display:inline-block"></span>Diárias</span>' +
+      '<span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;background:#10b981;border-radius:2px;display:inline-block"></span>Passagens</span>' +
+      '</div>';
+  }
+}
+
+function kpiCard(label, value, cor, sub) {
+  return `<div class="kpi-card ${cor}">
+    <div class="kpi-label">${label}</div>
+    <div class="kpi-value">${value}</div>
+    <div class="kpi-sub">${sub}</div>
+  </div>`;
+}
+
+// ── PCDPs ──────────────────────────────────────────────────
+async function carregarPcdps() {
+  try {
+    pcdpsData = await api('GET', '/api/pcdps');
+    preencherSelectSetor('f-pcdp-setor', true);
+    pagPcdp = 1;
+    renderPcdps();
+  } catch (e) { toast('Erro ao carregar PCDPs'); }
+}
+
+function statusBadgePcdp(s) {
+  const map = {
+    'Rascunho': 'b-rascunho', 'Aguardando Aprovação': 'b-aguard', 'Aprovada': 'b-aprovada',
+    'Rejeitada': 'b-rejeit', 'Em Viagem': 'b-viagem', 'Prestação de Contas': 'b-prestac',
+    'Finalizada': 'b-finaliz', 'Cancelada': 'b-cancel',
+  };
+  return `<span class="badge ${map[s] || ''}">${s}</span>`;
+}
+
+function statusBadgePrest(s) {
+  const map = { 'Pendente': 'b-pendente', 'Em análise': 'b-analise', 'Aprovada': 'b-quitada', 'Com pendências': 'b-pendencias' };
+  return `<span class="badge ${map[s] || ''}">${s}</span>`;
+}
+
+function renderPcdps() {
+  const busca = document.getElementById('f-pcdp-busca').value.toLowerCase();
+  const status = document.getElementById('f-pcdp-status').value;
+  const setor = document.getElementById('f-pcdp-setor').value;
+  const tipo = document.getElementById('f-pcdp-tipo').value;
+
+  let lista = pcdpsData.filter(p => {
+    if (status && p.status !== status) return false;
+    if (setor && p.setor !== setor) return false;
+    if (tipo && p.tipo !== tipo) return false;
+    if (busca) {
+      const texto = `${p.numero} ${p.servidor} ${p.destino} ${p.motivo}`.toLowerCase();
+      if (!texto.includes(busca)) return false;
+    }
+    return true;
+  });
+
+  document.getElementById('pcdps-count').textContent = `${lista.length} resultado(s)`;
+  const total = Math.ceil(lista.length / PER_PAGE);
+  pagPcdp = Math.max(1, Math.min(pagPcdp, total || 1));
+  const pagina = lista.slice((pagPcdp - 1) * PER_PAGE, pagPcdp * PER_PAGE);
+
+  const tbody = document.getElementById('tbody-pcdps');
+  const empty = document.getElementById('empty-pcdps');
+
+  if (pagina.length === 0) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+  } else {
+    empty.style.display = 'none';
+    tbody.innerHTML = pagina.map(p => `
+      <tr onclick="verDetalhesPcdp(${p.id})">
+        <td class="td-mono">${p.numero || '—'}</td>
+        <td><strong>${p.servidor || '—'}</strong></td>
+        <td class="td-trunc">${p.setor || '—'}</td>
+        <td class="td-trunc">${p.destino || '—'}</td>
+        <td class="td-mono">${p.data_saida || '—'}</td>
+        <td class="td-mono">${p.data_retorno || '—'}</td>
+        <td><span style="font-size:12px">${p.tipo || '—'}</span></td>
+        <td class="val-financeiro">${formatBRL(p.valor_total)}</td>
+        <td>${statusBadgePcdp(p.status)}</td>
+        <td onclick="event.stopPropagation()">
+          ${dropdownAcoesPcdp(p)}
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  const prev = document.getElementById('btn-pcdp-prev');
+  const next = document.getElementById('btn-pcdp-next');
+  prev.disabled = pagPcdp <= 1;
+  next.disabled = pagPcdp >= total;
+  document.getElementById('pag-pcdp-info').textContent = total > 1 ? `Pág. ${pagPcdp} / ${total}` : '';
+}
+
+function dropdownAcoesPcdp(p) {
+  const id = `dd-pcdp-${p.id}`;
+  return `
+    <div class="dropdown-acoes">
+      <button class="dropdown-btn" onclick="toggleDropdown('${id}', event)">
+        Ações <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor"><path d="M5 8l5 5 5-5z"/></svg>
+      </button>
+      <div class="dropdown-menu" id="${id}">
+        <button class="dropdown-item" onclick="verDetalhesPcdp(${p.id})">👁 Ver Detalhes</button>
+        <button class="dropdown-item" onclick="editarPcdp(${p.id})">✏️ Editar</button>
+        ${p.status === 'Rascunho' ? `<button class="dropdown-item" onclick="mudarStatus(${p.id},'Aguardando Aprovação')">📨 Submeter</button>` : ''}
+        ${p.status === 'Aguardando Aprovação' ? `<button class="dropdown-item" onclick="aprovarPcdp(${p.id})">✅ Aprovar</button><button class="dropdown-item danger" onclick="abrirModalRejeitar(${p.id})">❌ Rejeitar</button>` : ''}
+        ${p.status === 'Aprovada' ? `<button class="dropdown-item" onclick="mudarStatus(${p.id},'Em Viagem')">✈️ Iniciar Viagem</button>` : ''}
+        ${p.status === 'Em Viagem' ? `<button class="dropdown-item" onclick="mudarStatus(${p.id},'Prestação de Contas')">📋 Abrir Prestação</button>` : ''}
+        ${!['Cancelada','Finalizada','Rejeitada'].includes(p.status) ? `<button class="dropdown-item danger" onclick="mudarStatus(${p.id},'Cancelada')">🚫 Cancelar</button>` : ''}
+        ${usuarioAtual?.perfil === 'admin' ? `<button class="dropdown-item danger" onclick="excluirPcdp(${p.id})">🗑 Excluir</button>` : ''}
+      </div>
+    </div>
+  `;
+}
+
+function toggleDropdown(id, ev) {
+  ev.stopPropagation();
+  const menu = document.getElementById(id);
+  const rect = ev.currentTarget.getBoundingClientRect();
+  document.querySelectorAll('.dropdown-menu.open').forEach(m => { if (m.id !== id) m.classList.remove('open'); });
+  if (!menu.classList.contains('open')) {
+    menu.classList.add('open');
+    menu.style.top = rect.bottom + 4 + 'px';
+    menu.style.left = rect.left + 'px';
+  } else {
+    menu.classList.remove('open');
+  }
+}
+
+document.addEventListener('click', () => {
+  document.querySelectorAll('.dropdown-menu.open').forEach(m => m.classList.remove('open'));
+});
+
+// ── PCDP — Formulário ─────────────────────────────────────
+function abrirModalPcdp(pcdp = null) {
+  pcdpCorrente = pcdp;
+  document.getElementById('modal-pcdp-titulo').textContent = pcdp ? `Editar PCDP — ${pcdp.numero}` : 'Nova PCDP';
+
+  ['pcdp-servidor','pcdp-matricula','pcdp-cargo','pcdp-cpf','pcdp-destino','pcdp-motivo','pcdp-evento','pcdp-obs','pcdp-andamento'].forEach(id => {
+    const el = document.getElementById(id);
+    const campo = id.replace('pcdp-', '').replace(/-([a-z])/g, (_, l) => l.toUpperCase());
+    const mapa = { 'dataSaida': 'data_saida', 'dataRetorno': 'data_retorno', 'numDiarias': 'num_diarias', 'valorDiaria': 'valor_diaria_unit', 'valorDiarias': 'valor_diarias', 'valorPassagens': 'valor_passagens', 'valorTotal': 'valor_total' };
+    el.value = pcdp ? (pcdp[mapa[campo] || campo] || '') : '';
+  });
+
+  document.getElementById('pcdp-data-saida').value = pcdp?.data_saida || '';
+  document.getElementById('pcdp-data-retorno').value = pcdp?.data_retorno || '';
+  document.getElementById('pcdp-pais').value = pcdp?.pais || 'Brasil';
+  document.getElementById('pcdp-status').value = pcdp?.status || 'Rascunho';
+  document.getElementById('pcdp-tipo').value = pcdp?.tipo || 'Diárias e Passagens';
+  document.getElementById('pcdp-transporte').value = pcdp?.meio_transporte || 'Aéreo';
+  document.getElementById('pcdp-num-diarias').value = pcdp?.num_diarias || '';
+  document.getElementById('pcdp-valor-diaria').value = pcdp?.valor_diaria_unit || '';
+  document.getElementById('pcdp-valor-diarias').value = pcdp?.valor_diarias || '';
+  document.getElementById('pcdp-valor-passagens').value = pcdp?.valor_passagens || '';
+  document.getElementById('pcdp-valor-total').value = pcdp?.valor_total || '';
+
+  // Popular setor
+  const selectSetor = document.getElementById('pcdp-setor');
+  selectSetor.innerHTML = '<option value="">— Selecione —</option>' + setoresData.map(s => `<option ${pcdp?.setor === s ? 'selected' : ''}>${s}</option>`).join('');
+
+  toggleCamposFinanceiros();
+  abrirModal('modal-pcdp');
+}
+
+function toggleCamposFinanceiros() {
+  const tipo = document.getElementById('pcdp-tipo').value;
+  document.getElementById('campos-diarias').style.display = tipo !== 'Passagens' ? 'grid' : 'none';
+  document.getElementById('campos-passagens').style.display = tipo !== 'Diárias' ? 'flex' : 'none';
+}
+
+function calcularTotal() {
+  const nd = parseFloat(document.getElementById('pcdp-num-diarias').value) || 0;
+  const vu = parseFloat(document.getElementById('pcdp-valor-diaria').value) || 0;
+  const vd = Math.round(nd * vu * 100) / 100;
+  document.getElementById('pcdp-valor-diarias').value = vd || '';
+  const vp = parseFloat(document.getElementById('pcdp-valor-passagens').value) || 0;
+  document.getElementById('pcdp-valor-total').value = Math.round((vd + vp) * 100) / 100 || '';
+}
+
+async function salvarPcdp() {
+  const servidor = document.getElementById('pcdp-servidor').value.trim();
+  const setor = document.getElementById('pcdp-setor').value;
+  const destino = document.getElementById('pcdp-destino').value.trim();
+  if (!servidor) return toast('Preencha o nome do servidor');
+  if (!destino) return toast('Preencha o destino');
+
+  const dados = {
+    servidor, setor, destino,
+    matricula: document.getElementById('pcdp-matricula').value.trim(),
+    cargo: document.getElementById('pcdp-cargo').value.trim(),
+    cpf: document.getElementById('pcdp-cpf').value.trim(),
+    pais: document.getElementById('pcdp-pais').value.trim() || 'Brasil',
+    data_saida: document.getElementById('pcdp-data-saida').value,
+    data_retorno: document.getElementById('pcdp-data-retorno').value,
+    motivo: document.getElementById('pcdp-motivo').value.trim(),
+    evento: document.getElementById('pcdp-evento').value.trim(),
+    tipo: document.getElementById('pcdp-tipo').value,
+    meio_transporte: document.getElementById('pcdp-transporte').value,
+    num_diarias: parseFloat(document.getElementById('pcdp-num-diarias').value) || 0,
+    valor_diaria_unit: parseFloat(document.getElementById('pcdp-valor-diaria').value) || 0,
+    valor_diarias: parseFloat(document.getElementById('pcdp-valor-diarias').value) || 0,
+    valor_passagens: parseFloat(document.getElementById('pcdp-valor-passagens').value) || 0,
+    valor_total: parseFloat(document.getElementById('pcdp-valor-total').value) || 0,
+    status: document.getElementById('pcdp-status').value,
+    observacoes: document.getElementById('pcdp-obs').value.trim(),
+    andamento: document.getElementById('pcdp-andamento').value.trim(),
+  };
+
+  try {
+    if (pcdpCorrente) {
+      await api('PUT', `/api/pcdps/${pcdpCorrente.id}`, dados);
+      toast('PCDP atualizada!');
+    } else {
+      await api('POST', '/api/pcdps', dados);
+      toast('PCDP criada!');
+    }
+    fecharModal('modal-pcdp');
+    carregarPcdps();
+    carregarDashboard();
+  } catch (e) { toast('Erro: ' + e.message); }
+}
+
+function editarPcdp(id) {
+  const p = pcdpsData.find(x => x.id === id);
+  if (p) abrirModalPcdp(p);
+}
+
+function editarPcdpCorrente() {
+  fecharModal('modal-det-pcdp');
+  if (pcdpCorrente) abrirModalPcdp(pcdpCorrente);
+}
+
+async function excluirPcdp(id) {
+  if (!confirm('Excluir esta PCDP permanentemente?')) return;
+  try {
+    await api('DELETE', `/api/pcdps/${id}`);
+    toast('PCDP excluída');
+    carregarPcdps();
+    carregarDashboard();
+  } catch (e) { toast('Erro: ' + e.message); }
+}
+
+async function mudarStatus(id, status) {
+  const u = usuarioAtual?.nome;
+  const body = { status };
+  if (status === 'Aprovada') body.autorizado_por = u;
+  try {
+    await api('PATCH', `/api/pcdps/${id}/status`, body);
+    toast(`Status alterado: ${status}`);
+    carregarPcdps();
+    carregarDashboard();
+    if (document.getElementById('modal-det-pcdp').classList.contains('open')) verDetalhesPcdp(id);
+  } catch (e) { toast('Erro: ' + e.message); }
+}
+
+async function aprovarPcdp(id) {
+  await mudarStatus(id, 'Aprovada');
+}
+
+function abrirModalRejeitar(id) {
+  idParaRejeitar = id;
+  document.getElementById('motivo-rejeicao').value = '';
+  abrirModal('modal-rejeitar');
+}
+
+async function confirmarRejeicao() {
+  const motivo = document.getElementById('motivo-rejeicao').value.trim();
+  if (!motivo) return toast('Informe o motivo da rejeição');
+  try {
+    await api('PATCH', `/api/pcdps/${idParaRejeitar}/status`, { status: 'Rejeitada', motivo_rejeicao: motivo });
+    toast('PCDP rejeitada');
+    fecharModal('modal-rejeitar');
+    carregarPcdps();
+    carregarDashboard();
+  } catch (e) { toast('Erro: ' + e.message); }
+}
+
+// ── Detalhes PCDP ─────────────────────────────────────────
+function verDetalhesPcdp(id) {
+  const p = pcdpsData.find(x => x.id === id);
+  if (!p) return;
+  pcdpCorrente = p;
+
+  document.getElementById('det-pcdp-numero').textContent = p.numero || '—';
+  document.getElementById('det-pcdp-status-badge').innerHTML = statusBadgePcdp(p.status);
+  document.getElementById('det-servidor').textContent = p.servidor || '—';
+  document.getElementById('det-matricula').textContent = p.matricula || '—';
+  document.getElementById('det-cargo').textContent = p.cargo || '—';
+  document.getElementById('det-setor').textContent = p.setor || '—';
+  document.getElementById('det-cpf').textContent = p.cpf || '—';
+  document.getElementById('det-destino').textContent = p.destino || '—';
+  document.getElementById('det-pais').textContent = p.pais || 'Brasil';
+  document.getElementById('det-saida').textContent = p.data_saida || '—';
+  document.getElementById('det-retorno').textContent = p.data_retorno || '—';
+  document.getElementById('det-motivo').textContent = p.motivo || '—';
+  document.getElementById('det-evento').textContent = p.evento || '—';
+  document.getElementById('det-tipo').textContent = p.tipo || '—';
+  document.getElementById('det-transporte').textContent = p.meio_transporte || '—';
+  document.getElementById('det-num-diarias').textContent = p.num_diarias || '—';
+  document.getElementById('det-valor-diarias').textContent = formatBRL(p.valor_diarias);
+  document.getElementById('det-valor-passagens').textContent = formatBRL(p.valor_passagens);
+  document.getElementById('det-valor-total').textContent = formatBRL(p.valor_total);
+  document.getElementById('det-prazo-prest').textContent = p.prazo_prestacao || '—';
+  document.getElementById('det-autorizado').textContent = p.autorizado_por || '—';
+  document.getElementById('det-obs').textContent = p.observacoes || '—';
+  document.getElementById('det-andamento').textContent = p.andamento || '—';
+
+  const rejBloco = document.getElementById('det-rejeicao-bloco');
+  if (p.motivo_rejeicao) {
+    rejBloco.style.display = 'block';
+    document.getElementById('det-motivo-rejeicao').textContent = p.motivo_rejeicao;
+  } else {
+    rejBloco.style.display = 'none';
+  }
+
+  // Ações de status
+  const acoes = document.getElementById('det-acoes-status');
+  acoes.innerHTML = '';
+  if (p.status === 'Rascunho') acoes.innerHTML += `<button class="btn-secondary" onclick="mudarStatus(${p.id},'Aguardando Aprovação')">📨 Submeter</button>`;
+  if (p.status === 'Aguardando Aprovação') {
+    acoes.innerHTML += `<button class="btn-primary" onclick="aprovarPcdp(${p.id})">✅ Aprovar</button>`;
+    acoes.innerHTML += `<button class="btn-danger" onclick="abrirModalRejeitar(${p.id})">❌ Rejeitar</button>`;
+  }
+  if (p.status === 'Aprovada') acoes.innerHTML += `<button class="btn-primary" onclick="mudarStatus(${p.id},'Em Viagem')">✈️ Iniciar Viagem</button>`;
+  if (p.status === 'Em Viagem') acoes.innerHTML += `<button class="btn-primary" onclick="mudarStatus(${p.id},'Prestação de Contas')">📋 Abrir Prestação</button>`;
+
+  abrirModal('modal-det-pcdp');
+}
+
+// ── PRESTAÇÕES ─────────────────────────────────────────────
+async function carregarPrestacoes() {
+  try {
+    prestacoesData = await api('GET', '/api/prestacoes');
+    preencherSelectSetor('f-prest-setor', true);
+    pagPrest = 1;
+    renderPrestacoes();
+  } catch (e) { toast('Erro ao carregar prestações'); }
+}
+
+function renderPrestacoes() {
+  const busca = document.getElementById('f-prest-busca').value.toLowerCase();
+  const status = document.getElementById('f-prest-status').value;
+  const setor = document.getElementById('f-prest-setor').value;
+
+  let lista = prestacoesData.filter(p => {
+    if (status && p.status !== status) return false;
+    if (setor && p.setor !== setor) return false;
+    if (busca) {
+      const texto = `${p.pcdp_numero} ${p.servidor}`.toLowerCase();
+      if (!texto.includes(busca)) return false;
+    }
+    return true;
+  });
+
+  document.getElementById('prest-count').textContent = `${lista.length} resultado(s)`;
+  const total = Math.ceil(lista.length / PER_PAGE);
+  pagPrest = Math.max(1, Math.min(pagPrest, total || 1));
+  const pagina = lista.slice((pagPrest - 1) * PER_PAGE, pagPrest * PER_PAGE);
+
+  const tbody = document.getElementById('tbody-prestacoes');
+  const empty = document.getElementById('empty-prestacoes');
+
+  if (pagina.length === 0) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+  } else {
+    empty.style.display = 'none';
+    tbody.innerHTML = pagina.map(p => {
+      const saldoClass = p.saldo > 0 ? 'saldo-positivo' : p.saldo < 0 ? 'saldo-negativo' : 'saldo-zero';
+      const saldoTxt = p.saldo > 0 ? `Devolver ${formatBRL(p.saldo)}` : p.saldo < 0 ? `Receber ${formatBRL(Math.abs(p.saldo))}` : 'Quitado';
+      return `
+        <tr onclick="abrirPrestacaoForm(${p.id})">
+          <td class="td-mono">${p.pcdp_numero || '—'}</td>
+          <td><strong>${p.servidor || '—'}</strong></td>
+          <td class="td-trunc">${p.setor || '—'}</td>
+          <td class="td-mono">${p.data_retorno || '—'}</td>
+          <td class="td-mono" style="${diasStyle(p.prazo_prestacao)}">${p.prazo_prestacao || '—'}</td>
+          <td class="val-financeiro">${formatBRL(p.valor_total_pago)}</td>
+          <td class="val-financeiro">${formatBRL(p.valor_total_gasto)}</td>
+          <td class="val-financeiro ${saldoClass}">${saldoTxt}</td>
+          <td>${statusBadgePrest(p.status)}</td>
+          <td onclick="event.stopPropagation()">
+            <div class="dropdown-acoes">
+              <button class="dropdown-btn" onclick="toggleDropdown('dd-prest-${p.id}',event)">Ações <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor"><path d="M5 8l5 5 5-5z"/></svg></button>
+              <div class="dropdown-menu" id="dd-prest-${p.id}">
+                <button class="dropdown-item" onclick="abrirPrestacaoForm(${p.id})">✏️ Editar</button>
+                ${p.status !== 'Aprovada' ? `<button class="dropdown-item" onclick="mudarStatusPrest(${p.id},'Em análise')">🔍 Marcar Em Análise</button>` : ''}
+                ${p.status !== 'Aprovada' ? `<button class="dropdown-item" onclick="mudarStatusPrest(${p.id},'Aprovada')">✅ Aprovar</button>` : ''}
+                ${p.status !== 'Aprovada' ? `<button class="dropdown-item danger" onclick="mudarStatusPrest(${p.id},'Com pendências')">⚠️ Sinalizar Pendências</button>` : ''}
+              </div>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  const prev = document.getElementById('btn-prest-prev');
+  const next = document.getElementById('btn-prest-next');
+  prev.disabled = pagPrest <= 1;
+  next.disabled = pagPrest >= total;
+  document.getElementById('pag-prest-info').textContent = total > 1 ? `Pág. ${pagPrest} / ${total}` : '';
+}
+
+function diasStyle(prazo) {
+  if (!prazo) return '';
+  const partes = prazo.split('/');
+  if (partes.length !== 3) return '';
+  const d = new Date(`${partes[2]}-${partes[1]}-${partes[0]}`);
+  const hoje = new Date(); hoje.setHours(0,0,0,0); d.setHours(0,0,0,0);
+  const dias = Math.ceil((d - hoje) / (1000*60*60*24));
+  if (dias < 0) return 'color:var(--vermelho);font-weight:600';
+  if (dias <= 3) return 'color:var(--amarelo);font-weight:600';
+  return '';
+}
+
+function abrirPrestacaoForm(id) {
+  const p = prestacoesData.find(x => x.id === id);
+  if (!p) return;
+  prestacaoCorrente = p;
+
+  document.getElementById('modal-prest-titulo').textContent = `Prestação — ${p.pcdp_numero}`;
+  document.getElementById('prest-pcdp-numero').textContent = p.pcdp_numero || '—';
+  document.getElementById('prest-servidor').textContent = p.servidor || '—';
+  document.getElementById('prest-data-retorno').textContent = p.data_retorno || '—';
+  document.getElementById('prest-val-diarias-pagas').value = p.valor_diarias_pagas || '';
+  document.getElementById('prest-val-passagens-pagas').value = p.valor_passagens_pagas || '';
+  document.getElementById('prest-val-total-pago').value = p.valor_total_pago || '';
+  document.getElementById('prest-val-gasto-diarias').value = p.valor_gasto_diarias || '';
+  document.getElementById('prest-val-gasto-passagens').value = p.valor_gasto_passagens || '';
+  document.getElementById('prest-val-gasto-outros').value = p.valor_gasto_outros || '';
+  document.getElementById('prest-val-total-gasto').value = p.valor_total_gasto || '';
+  document.getElementById('prest-saldo').value = p.saldo || '';
+  document.getElementById('prest-status').value = p.status || 'Pendente';
+  document.getElementById('prest-obs').value = p.observacoes || '';
+  calcularPrestacao();
+  abrirModal('modal-prestacao');
+}
+
+function calcularPrestacao() {
+  const dp = parseFloat(document.getElementById('prest-val-diarias-pagas').value) || 0;
+  const pp = parseFloat(document.getElementById('prest-val-passagens-pagas').value) || 0;
+  const totalPago = Math.round((dp + pp) * 100) / 100;
+  document.getElementById('prest-val-total-pago').value = totalPago || '';
+
+  const gd = parseFloat(document.getElementById('prest-val-gasto-diarias').value) || 0;
+  const gp = parseFloat(document.getElementById('prest-val-gasto-passagens').value) || 0;
+  const go = parseFloat(document.getElementById('prest-val-gasto-outros').value) || 0;
+  const totalGasto = Math.round((gd + gp + go) * 100) / 100;
+  document.getElementById('prest-val-total-gasto').value = totalGasto || '';
+
+  const saldo = Math.round((totalPago - totalGasto) * 100) / 100;
+  const saldoEl = document.getElementById('prest-saldo');
+  saldoEl.value = saldo;
+  saldoEl.style.color = saldo > 0 ? 'var(--vermelho)' : saldo < 0 ? 'var(--verde)' : 'inherit';
+
+  const desc = document.getElementById('prest-saldo-desc');
+  if (saldo > 0) desc.textContent = `Servidor deve devolver ${formatBRL(saldo)} ao erário`;
+  else if (saldo < 0) desc.textContent = `Erário deve complementar ${formatBRL(Math.abs(saldo))} ao servidor`;
+  else desc.textContent = 'Sem saldo a devolver ou receber';
+}
+
+async function salvarPrestacao() {
+  if (!prestacaoCorrente) return;
+  const dados = {
+    valor_diarias_pagas: parseFloat(document.getElementById('prest-val-diarias-pagas').value) || 0,
+    valor_passagens_pagas: parseFloat(document.getElementById('prest-val-passagens-pagas').value) || 0,
+    valor_total_pago: parseFloat(document.getElementById('prest-val-total-pago').value) || 0,
+    valor_gasto_diarias: parseFloat(document.getElementById('prest-val-gasto-diarias').value) || 0,
+    valor_gasto_passagens: parseFloat(document.getElementById('prest-val-gasto-passagens').value) || 0,
+    valor_gasto_outros: parseFloat(document.getElementById('prest-val-gasto-outros').value) || 0,
+    valor_total_gasto: parseFloat(document.getElementById('prest-val-total-gasto').value) || 0,
+    status: document.getElementById('prest-status').value,
+    observacoes: document.getElementById('prest-obs').value.trim(),
+  };
+  try {
+    await api('PUT', `/api/prestacoes/${prestacaoCorrente.id}`, dados);
+    toast('Prestação salva!');
+    fecharModal('modal-prestacao');
+    carregarPrestacoes();
+    carregarDashboard();
+  } catch (e) { toast('Erro: ' + e.message); }
+}
+
+async function mudarStatusPrest(id, status) {
+  try {
+    await api('PATCH', `/api/prestacoes/${id}/status`, { status });
+    toast(`Status: ${status}`);
+    carregarPrestacoes();
+    carregarDashboard();
+  } catch (e) { toast('Erro: ' + e.message); }
+}
+
+// ── PRAZOS ─────────────────────────────────────────────────
+async function carregarPrazos() {
+  try {
+    const itens = await api('GET', '/api/prazos');
+    document.getElementById('prazos-count').textContent = `${itens.length} item(s)`;
+    const list = document.getElementById('prazo-list');
+    const empty = document.getElementById('empty-prazos');
+    if (itens.length === 0) {
+      list.innerHTML = '';
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+    list.innerHTML = itens.map(item => {
+      const dias = item.dias;
+      let classDias = 'ok', txtDias = `${dias}d`;
+      if (dias === null) { classDias = 'ok'; txtDias = '—'; }
+      else if (dias < 0) { classDias = 'vencido'; txtDias = `${Math.abs(dias)}d`; }
+      else if (dias <= 2) { classDias = 'urgente'; }
+      else if (dias <= 7) { classDias = 'atencao'; }
+
+      const icone = item.tipo === 'prestacao' ? '📋' : item.tipo === 'aprovacao' ? '⏳' : '✈️';
+      return `
+        <div class="prazo-item">
+          <div class="prazo-dias ${classDias}">
+            <strong>${dias !== null ? Math.abs(dias) : '—'}</strong>
+            <span>${dias < 0 ? 'ATRASO' : 'DIAS'}</span>
+          </div>
+          <div class="prazo-info">
+            <div class="prazo-numero">${icone} ${item.numero}</div>
+            <div class="prazo-titulo">${item.titulo}</div>
+            <div class="prazo-detalhe">${item.detalhe}</div>
+          </div>
+          <div class="prazo-actions">
+            ${item.tipo === 'prestacao' ? `<button class="btn-secondary" style="font-size:12px;padding:5px 10px" onclick="navigate('prestacao')">Ver Prestação</button>` : `<button class="btn-secondary" style="font-size:12px;padding:5px 10px" onclick="navigate('pcdps')">Ver PCDP</button>`}
+          </div>
+        </div>
+      `;
+    }).join('');
+  } catch (e) { toast('Erro ao carregar prazos'); }
+}
+
+// ── USUÁRIOS ───────────────────────────────────────────────
+async function carregarUsuarios() {
+  try {
+    usuariosData = await api('GET', '/api/usuarios');
+    document.getElementById('usuarios-count').textContent = `${usuariosData.length} usuário(s)`;
+    const tbody = document.getElementById('tbody-usuarios');
+    tbody.innerHTML = usuariosData.map(u => `
+      <tr>
+        <td><strong>${u.nome}</strong></td>
+        <td class="td-mono">${u.login}</td>
+        <td>${u.setor || '—'}</td>
+        <td><span class="badge ${u.perfil === 'admin' ? 'tag-perfil-admin' : 'tag-perfil-view'}">${u.perfil === 'admin' ? 'Admin' : 'Visualizador'}</span></td>
+        <td>
+          <button class="btn-secondary" style="font-size:12px;padding:4px 10px;margin-right:6px" onclick="editarUsuario(${u.id})">Editar</button>
+          ${u.id !== usuarioAtual?.id ? `<button class="btn-danger" style="font-size:12px;padding:4px 10px" onclick="excluirUsuario(${u.id})">Excluir</button>` : ''}
+        </td>
+      </tr>
+    `).join('');
+  } catch (e) { toast('Erro ao carregar usuários'); }
+}
+
+function abrirModalUsuario() {
+  usuarioEditId = null;
+  document.getElementById('modal-usuario-titulo').textContent = 'Novo Usuário';
+  document.getElementById('usr-nome').value = '';
+  document.getElementById('usr-login').value = '';
+  document.getElementById('usr-senha').value = '';
+  document.getElementById('usr-perfil').value = 'visualizador';
+  document.getElementById('usr-senha-label').textContent = '(obrigatório)';
+  document.getElementById('usr-login').disabled = false;
+
+  const sel = document.getElementById('usr-setor');
+  sel.innerHTML = '<option value="">— Nenhum —</option>' + setoresData.map(s => `<option>${s}</option>`).join('');
+  abrirModal('modal-usuario');
+}
+
+function editarUsuario(id) {
+  const u = usuariosData.find(x => x.id === id);
+  if (!u) return;
+  usuarioEditId = id;
+  document.getElementById('modal-usuario-titulo').textContent = `Editar — ${u.nome}`;
+  document.getElementById('usr-nome').value = u.nome;
+  document.getElementById('usr-login').value = u.login;
+  document.getElementById('usr-login').disabled = true;
+  document.getElementById('usr-senha').value = '';
+  document.getElementById('usr-senha-label').textContent = '(deixe em branco para manter)';
+  document.getElementById('usr-perfil').value = u.perfil;
+  const sel = document.getElementById('usr-setor');
+  sel.innerHTML = '<option value="">— Nenhum —</option>' + setoresData.map(s => `<option ${u.setor === s ? 'selected' : ''}>${s}</option>`).join('');
+  abrirModal('modal-usuario');
+}
+
+async function salvarUsuario() {
+  const nome = document.getElementById('usr-nome').value.trim();
+  const login = document.getElementById('usr-login').value.trim();
+  const senha = document.getElementById('usr-senha').value;
+  const perfil = document.getElementById('usr-perfil').value;
+  const setor = document.getElementById('usr-setor').value;
+  if (!nome) return toast('Informe o nome');
+  try {
+    if (usuarioEditId) {
+      const body = { nome, perfil, setor };
+      if (senha) body.senha = senha;
+      await api('PUT', `/api/usuarios/${usuarioEditId}`, body);
+      toast('Usuário atualizado');
+    } else {
+      if (!login) return toast('Informe o login');
+      if (!senha) return toast('Informe a senha');
+      await api('POST', '/api/usuarios', { login, senha, nome, perfil, setor });
+      toast('Usuário criado');
+    }
+    fecharModal('modal-usuario');
+    carregarUsuarios();
+  } catch (e) { toast('Erro: ' + e.message); }
+}
+
+async function excluirUsuario(id) {
+  if (!confirm('Excluir este usuário?')) return;
+  try {
+    await api('DELETE', `/api/usuarios/${id}`);
+    toast('Usuário excluído');
+    carregarUsuarios();
+  } catch (e) { toast('Erro: ' + e.message); }
+}
+
+// ── ALTERAR SENHA ──────────────────────────────────────────
+function openAlterarSenha() {
+  document.getElementById('senha-atual').value = '';
+  document.getElementById('senha-nova').value = '';
+  document.getElementById('senha-confirma').value = '';
+  abrirModal('modal-alterar-senha');
+}
+
+async function salvarSenha() {
+  const atual = document.getElementById('senha-atual').value;
+  const nova = document.getElementById('senha-nova').value;
+  const conf = document.getElementById('senha-confirma').value;
+  if (nova !== conf) return toast('As senhas não coincidem');
+  if (nova.length < 6) return toast('Mínimo 6 caracteres');
+  try {
+    await api('PATCH', `/api/usuarios/${usuarioAtual.id}/senha`, { senha_atual: atual, nova_senha: nova });
+    toast('Senha alterada com sucesso!');
+    fecharModal('modal-alterar-senha');
+  } catch (e) { toast('Erro: ' + e.message); }
+}
+
+// ── SETORES ────────────────────────────────────────────────
+async function carregarSetores() {
+  try {
+    setoresData = await api('GET', '/api/setores');
+    renderSetores();
+  } catch (e) { toast('Erro ao carregar setores'); }
+}
+
+function renderSetores() {
+  const lista = document.getElementById('setores-lista');
+  lista.innerHTML = setoresData.map((s, i) => `
+    <div style="display:flex;align-items:center;gap:6px;background:var(--azul-claro);border:1px solid var(--azul-borda);padding:6px 12px;border-radius:20px;font-size:13px">
+      ${s}
+      <button onclick="removerSetor(${i})" style="background:none;border:none;cursor:pointer;color:var(--texto-sec);font-size:16px;line-height:1;padding:0 2px" title="Remover">×</button>
+    </div>
+  `).join('');
+}
+
+function adicionarSetor() {
+  const input = document.getElementById('setor-novo-input');
+  const nome = input.value.trim();
+  if (!nome || setoresData.includes(nome)) { toast('Setor inválido ou já existe'); return; }
+  setoresData.push(nome);
+  input.value = '';
+  renderSetores();
+}
+
+function removerSetor(i) {
+  setoresData.splice(i, 1);
+  renderSetores();
+}
+
+async function salvarSetores() {
+  try {
+    await api('POST', '/api/setores', { setores: setoresData });
+    toast('Setores salvos!');
+  } catch (e) { toast('Erro: ' + e.message); }
+}
+
+function preencherSelectSetor(id, comOpcaoTodos = false) {
+  const sel = document.getElementById(id);
+  if (!sel) return;
+  const atual = sel.value;
+  sel.innerHTML = (comOpcaoTodos ? '<option value="">Todos os setores</option>' : '<option value="">— Selecione —</option>') +
+    setoresData.map(s => `<option ${atual === s ? 'selected' : ''}>${s}</option>`).join('');
+}
+
+// ── LOGS ────────────────────────────────────────────────────
+async function carregarLogs() {
+  try {
+    logsData = await api('GET', '/api/logs');
+    renderLogs();
+  } catch (e) { toast('Erro ao carregar logs'); }
+}
+
+function renderLogs() {
+  const busca = document.getElementById('f-log-busca').value.toLowerCase();
+  const tipo = document.getElementById('f-log-tipo').value;
+  const lista = logsData.filter(l => {
+    if (tipo && l.tipo !== tipo) return false;
+    if (busca && !`${l.ts} ${l.login} ${l.acao} ${l.detalhe}`.toLowerCase().includes(busca)) return false;
+    return true;
+  });
+  document.getElementById('logs-count').textContent = `${lista.length} log(s)`;
+  const tbody = document.getElementById('tbody-logs');
+  const empty = document.getElementById('empty-logs');
+  if (lista.length === 0) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+  tbody.innerHTML = lista.slice(0, 200).map(l => `
+    <tr>
+      <td class="td-mono" style="white-space:nowrap;font-size:11px">${l.ts}</td>
+      <td>${l.nome || l.login}</td>
+      <td><span class="badge b-rascunho" style="font-size:10px">${l.tipo}</span></td>
+      <td>${l.acao}</td>
+      <td class="td-trunc" style="color:var(--texto-sec);font-size:12px">${l.detalhe || '—'}</td>
+    </tr>
+  `).join('');
+}
+
+// ── INIT ───────────────────────────────────────────────────
+(async () => {
+  // Carrega setores antes de tudo
+  try { setoresData = await api('GET', '/api/setores'); } catch (e) { /* silencioso no login */ }
+  verificarSessao();
+})();
+</script>
+</body>
+</html>

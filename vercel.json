@@ -1,0 +1,18 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "backend/server.js",
+      "use": "@vercel/node",
+      "config": { "maxLambdaSize": "50mb" }
+    }
+  ],
+  "routes": [
+    { "src": "/api/(.*)", "dest": "backend/server.js" },
+    { "src": "/sistema_scdp.css", "dest": "/sistema_scdp.css" },
+    { "src": "/(.*)", "dest": "backend/server.js" }
+  ],
+  "functions": {
+    "backend/server.js": { "maxDuration": 300 }
+  }
+}
