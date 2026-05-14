@@ -256,6 +256,31 @@ async function garantirAdmin() {
     await Usuario.create({ id: 1, login: 'admin', senha: hash, nome: 'Administrador', perfil: 'admin', cor: '#2563eb' });
     console.log('✅ Admin criado: login=admin senha=admin123');
   }
+  // Garante que o Counter de usuários nunca colida com admin (id=1)
+  await Counter.updateOne(
+    { _id: 'usuarios' },
+    [{ $set: { seq: { $max: ['$seq', 1] } } }],
+    { upsert: true }
+  );
+}
+
+// Corrige IDs duplicados causados pela criação de admin com id=1 sem inicializar o counter
+async function repararIdsUsuarios() {
+  try {
+    const usuarios = await Usuario.find({}).sort({ _id: 1 }).lean();
+    const idsVistos = new Set();
+    for (const u of usuarios) {
+      if (u.id != null && idsVistos.has(u.id)) {
+        const novoId = await nextId(Usuario);
+        await Usuario.updateOne({ _id: u._id }, { $set: { id: novoId } });
+        console.log(`🔧 ID duplicado corrigido: ${u.login} ${u.id} → ${novoId}`);
+      } else if (u.id != null) {
+        idsVistos.add(u.id);
+      }
+    }
+  } catch (e) {
+    console.warn('⚠️  repararIdsUsuarios:', e.message);
+  }
 }
 
 // ════════════════════════════════════════════════════════════
@@ -911,7 +936,8 @@ if (!IS_VERCEL) {
     mongoose.connect(uri).then(() => {
       console.log('✅ MongoDB conectado');
       return garantirAdmin();
-    }).then(() => {
+    }).then(() => repararIdsUsuarios())
+    .then(() => {
       setInterval(fazerBackup, 2 * 60 * 60 * 1000);
     }).catch(err => console.error('❌ MongoDB:', err.message));
   } else {

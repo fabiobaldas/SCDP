@@ -1686,18 +1686,27 @@ async function carregarUsuarios() {
     usuariosData = await api('GET', '/api/usuarios');
     document.getElementById('usuarios-count').textContent = `${usuariosData.length} usuário(s)`;
     const tbody = document.getElementById('tbody-usuarios');
-    tbody.innerHTML = usuariosData.map(u => `
+    const PERFIL_BADGE = {
+      admin:       { cls: 'tag-perfil-admin', label: 'Admin' },
+      autorizador: { cls: 'tag-perfil-admin', label: 'Autorizador' },
+      secretaria:  { cls: 'tag-perfil-view',  label: 'Secretaria' },
+      servidor:    { cls: 'tag-perfil-view',  label: 'Servidor' },
+      visualizador:{ cls: 'tag-perfil-view',  label: 'Visualizador' },
+    };
+    tbody.innerHTML = usuariosData.map(u => {
+      const pb = PERFIL_BADGE[u.perfil] || { cls: 'tag-perfil-view', label: u.perfil };
+      return `
       <tr>
         <td><strong>${u.nome}</strong></td>
         <td class="td-mono">${u.login}</td>
         <td>${u.setor || '—'}</td>
-        <td><span class="badge ${u.perfil === 'admin' ? 'tag-perfil-admin' : 'tag-perfil-view'}">${u.perfil === 'admin' ? 'Admin' : 'Visualizador'}</span></td>
+        <td><span class="badge ${pb.cls}">${pb.label}</span></td>
         <td>
           <button class="btn-secondary" style="font-size:12px;padding:4px 10px;margin-right:6px" onclick="editarUsuario(${u.id})">Editar</button>
           ${u.id !== usuarioAtual?.id ? `<button class="btn-danger" style="font-size:12px;padding:4px 10px" onclick="excluirUsuario(${u.id})">Excluir</button>` : ''}
         </td>
-      </tr>
-    `).join('');
+      </tr>`;
+    }).join('');
   } catch (e) { toast('Erro ao carregar usuários'); }
 }
 
