@@ -404,7 +404,9 @@ app.get('/api/me', (req, res) => {
 // ════════════════════════════════════════════════════════════
 app.get('/api/pcdps', auth, async (req, res) => {
   try {
-    const pcdps = await Pcdp.find({}).sort({ id: -1 }).lean();
+    const perfil = req.session.usuario.perfil;
+    const query  = perfil === 'servidor' ? { criado_por: req.session.usuario.nome } : {};
+    const pcdps  = await Pcdp.find(query).sort({ id: -1 }).lean();
     res.json(pcdps);
   } catch (e) { res.status(500).json({ erro: 'Erro ao buscar PCDPs' }); }
 });
@@ -437,7 +439,19 @@ app.post('/api/pcdps', auth, async (req, res) => {
 
 app.put('/api/pcdps/:id', auth, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id    = parseInt(req.params.id);
+    const perfil = req.session.usuario.perfil;
+
+    // Servidor só pode editar as próprias PCDPs em Rascunho
+    if (perfil === 'servidor') {
+      const existing = await Pcdp.findOne({ id }).lean();
+      if (!existing) return res.status(404).json({ erro: 'PCDP não encontrada' });
+      if (existing.criado_por !== req.session.usuario.nome)
+        return res.status(403).json({ erro: 'Você só pode editar suas próprias PCDPs' });
+      if (existing.status !== 'Rascunho')
+        return res.status(403).json({ erro: 'Só é possível editar PCDPs em Rascunho' });
+    }
+
     const dados = pick(req.body, CAMPOS_PCDP);
     dados.atualizado_em = agora();
     if (dados.data_retorno) dados.prazo_prestacao = adicionarDias(dados.data_retorno, 7);
@@ -470,6 +484,28 @@ app.patch('/api/pcdps/:id/status', auth, async (req, res) => {
 
     const STATUS_VALIDOS = ['Rascunho','Aguardando Aprovação','Aprovada','Rejeitada','Em Viagem','Prestação de Contas','Finalizada','Cancelada'];
     if (!STATUS_VALIDOS.includes(status)) return res.status(400).json({ erro: 'Status inválido' });
+
+    // ── Controle de acesso por perfil ─────────────────────────
+    const perfil = req.session.usuario.perfil;
+    const TRANSICOES = {
+      'Aguardando Aprovação': ['servidor', 'secretaria', 'admin'],
+      'Aprovada':             ['autorizador', 'admin'],
+      'Rejeitada':            ['autorizador', 'admin'],
+      'Em Viagem':            ['secretaria', 'admin'],
+      'Prestação de Contas':  ['secretaria', 'admin'],
+      'Finalizada':           ['secretaria', 'admin'],
+      'Cancelada':            ['servidor', 'secretaria', 'autorizador', 'admin'],
+      'Rascunho':             ['servidor', 'admin'],
+    };
+    if (TRANSICOES[status] && !TRANSICOES[status].includes(perfil))
+      return res.status(403).json({ erro: `Seu perfil não tem permissão para esta ação.` });
+
+    // Servidor só pode alterar as próprias PCDPs
+    if (perfil === 'servidor') {
+      const pcdpCheck = await Pcdp.findOne({ id }).lean();
+      if (pcdpCheck?.criado_por !== req.session.usuario.nome)
+        return res.status(403).json({ erro: 'Você só pode alterar suas próprias PCDPs' });
+    }
 
     const upd = { status, atualizado_em: agora() };
     if (motivo_rejeicao) upd.motivo_rejeicao = motivo_rejeicao;
@@ -573,9 +609,12 @@ app.patch('/api/prestacoes/:id/status', auth, async (req, res) => {
 // ════════════════════════════════════════════════════════════
 app.get('/api/dashboard', auth, async (req, res) => {
   try {
+    const perfil     = req.session.usuario.perfil;
+    const isServidor = perfil === 'servidor';
+    const pcdpQuery  = isServidor ? { criado_por: req.session.usuario.nome } : {};
     const [pcdps, prestacoes, setores] = await Promise.all([
-      Pcdp.find({}).lean(),
-      Prestacao.find({}).lean(),
+      Pcdp.find(pcdpQuery).lean(),
+      isServidor ? Promise.resolve([]) : Prestacao.find({}).lean(),
       getSetores(),
     ]);
 

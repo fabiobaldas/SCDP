@@ -57,7 +57,7 @@
         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 2h8l4 4v12a2 2 0 01-2 2H4a2 2 0 01-2-2V4a2 2 0 012-2z"/><path d="M12 2v4h4"/><path d="M7 10h6M7 13h4"/></svg>
         PCDPs
       </div>
-      <div class="nav-item" onclick="navigate('prestacao', this)">
+      <div class="nav-item" id="nav-prestacao" onclick="navigate('prestacao', this)">
         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="16" height="14" rx="2"/><path d="M6 8h8M6 11h5M14 15l2-2-2-2"/></svg>
         Prestação de Contas
       </div>
@@ -625,9 +625,8 @@
       <div id="det-andamento" style="font-size:12px;color:var(--texto-sec);white-space:pre-wrap;background:var(--cinza);border-radius:8px;padding:12px 14px;font-family:'DM Mono',monospace"></div>
     </div>
     <div class="modal-footer">
-      <button class="btn-secondary" onclick="editarPcdpCorrente()">Editar</button>
-      <div id="det-acoes-status" style="display:flex;gap:8px;flex-wrap:wrap;margin-left:auto"></div>
-      <button class="modal-close btn-cancel" onclick="fecharModal('modal-det-pcdp')">Fechar</button>
+      <div id="det-acoes-status" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+      <button class="btn-cancel" style="margin-left:auto" onclick="fecharModal('modal-det-pcdp')">Fechar</button>
     </div>
   </div>
 </div>
@@ -762,8 +761,11 @@
         <div class="form-group">
           <label style="font-size:12px;font-weight:500;color:var(--texto-sec);text-transform:uppercase;letter-spacing:.04em">Perfil</label>
           <select id="usr-perfil" class="form-input" style="margin-top:5px">
-            <option value="visualizador">Visualizador</option>
-            <option value="admin">Administrador</option>
+            <option value="servidor">Servidor — cria e acompanha as próprias PCDPs</option>
+            <option value="autorizador">Autorizador — aprova e rejeita PCDPs</option>
+            <option value="secretaria">Secretaria — gerencia viagens e prestações</option>
+            <option value="visualizador">Visualizador — somente leitura</option>
+            <option value="admin">Administrador — acesso total</option>
           </select>
         </div>
       </div>
@@ -949,19 +951,31 @@ function iniciarApp() {
 
   const u = usuarioAtual;
   document.getElementById('user-name-label').textContent = u.nome;
-  document.getElementById('user-role-label').textContent = u.perfil === 'admin' ? 'Administrador' : 'Visualizador';
+  const PERFIL_LABEL = { admin:'Administrador', autorizador:'Autorizador', secretaria:'Secretaria', servidor:'Servidor', visualizador:'Visualizador' };
+  document.getElementById('user-role-label').textContent = PERFIL_LABEL[u.perfil] || u.perfil;
   document.getElementById('user-avatar').textContent = u.nome.charAt(0).toUpperCase();
-  document.getElementById('user-avatar').style.background = u.cor || '#2563eb';
-  const perfil = document.getElementById('topbar-perfil');
-  perfil.textContent = u.perfil === 'admin' ? 'Admin' : 'Visualizador';
-  perfil.className = `badge topbar-perfil ${u.perfil === 'admin' ? 'tag-perfil-admin' : 'tag-perfil-view'}`;
+  document.getElementById('user-avatar').style.background = u.cor || '#c65a00';
+  const perfilBadge = document.getElementById('topbar-perfil');
+  perfilBadge.textContent = PERFIL_LABEL[u.perfil] || u.perfil;
+  perfilBadge.className = `badge topbar-perfil ${u.perfil === 'admin' ? 'tag-perfil-admin' : 'tag-perfil-view'}`;
 
-  // Oculta itens admin para visualizador
-  if (u.perfil !== 'admin') {
-    ['nav-usuarios','nav-setores','nav-logs'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.style.display = 'none';
-    });
+  // ── Visibilidade da sidebar por perfil ──────────────────────
+  const pf = u.perfil;
+
+  // Administração: só admin
+  ['nav-usuarios','nav-setores','nav-logs'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = pf === 'admin' ? '' : 'none';
+  });
+
+  // Prestação de Contas: esconde para servidor (só vê as próprias)
+  const navPrest = document.getElementById('nav-prestacao');
+  if (navPrest) navPrest.style.display = pf === 'servidor' ? 'none' : '';
+
+  // Servidor: ajusta título da página de PCDPs
+  if (pf === 'servidor') {
+    const ct = document.querySelector('.card-title');
+    // será ajustado em renderPcdps()
   }
 
   // Data no topbar
@@ -1173,8 +1187,32 @@ function renderPcdps() {
   document.getElementById('pag-pcdp-info').textContent = total > 1 ? `Pág. ${pagPcdp} / ${total}` : '';
 }
 
+function podeTransicao(status) {
+  const pf = usuarioAtual?.perfil;
+  const mapa = {
+    'Aguardando Aprovação': ['servidor','secretaria','admin'],
+    'Aprovada':             ['autorizador','admin'],
+    'Rejeitada':            ['autorizador','admin'],
+    'Em Viagem':            ['secretaria','admin'],
+    'Prestação de Contas':  ['secretaria','admin'],
+    'Finalizada':           ['secretaria','admin'],
+    'Cancelada':            ['servidor','secretaria','autorizador','admin'],
+    'Rascunho':             ['servidor','admin'],
+  };
+  return mapa[status]?.includes(pf) ?? false;
+}
+
+function podeEditar(p) {
+  const pf = usuarioAtual?.perfil;
+  if (pf === 'admin') return true;
+  if (pf === 'servidor') return p.criado_por === usuarioAtual.nome && p.status === 'Rascunho';
+  if (pf === 'secretaria') return true;
+  return false;
+}
+
 function dropdownAcoesPcdp(p) {
   const id = `dd-pcdp-${p.id}`;
+  const pf = usuarioAtual?.perfil;
   return `
     <div class="dropdown-acoes">
       <button class="dropdown-btn" onclick="toggleDropdown('${id}', event)">
@@ -1182,13 +1220,14 @@ function dropdownAcoesPcdp(p) {
       </button>
       <div class="dropdown-menu" id="${id}">
         <button class="dropdown-item" onclick="verDetalhesPcdp(${p.id})">👁 Ver Detalhes</button>
-        <button class="dropdown-item" onclick="editarPcdp(${p.id})">✏️ Editar</button>
-        ${p.status === 'Rascunho' ? `<button class="dropdown-item" onclick="mudarStatus(${p.id},'Aguardando Aprovação')">📨 Submeter</button>` : ''}
-        ${p.status === 'Aguardando Aprovação' ? `<button class="dropdown-item" onclick="aprovarPcdp(${p.id})">✅ Aprovar</button><button class="dropdown-item danger" onclick="abrirModalRejeitar(${p.id})">❌ Rejeitar</button>` : ''}
-        ${p.status === 'Aprovada' ? `<button class="dropdown-item" onclick="mudarStatus(${p.id},'Em Viagem')">✈️ Iniciar Viagem</button>` : ''}
-        ${p.status === 'Em Viagem' ? `<button class="dropdown-item" onclick="mudarStatus(${p.id},'Prestação de Contas')">📋 Abrir Prestação</button>` : ''}
-        ${!['Cancelada','Finalizada','Rejeitada'].includes(p.status) ? `<button class="dropdown-item danger" onclick="mudarStatus(${p.id},'Cancelada')">🚫 Cancelar</button>` : ''}
-        ${usuarioAtual?.perfil === 'admin' ? `<button class="dropdown-item danger" onclick="excluirPcdp(${p.id})">🗑 Excluir</button>` : ''}
+        ${podeEditar(p) ? `<button class="dropdown-item" onclick="editarPcdp(${p.id})">✏️ Editar</button>` : ''}
+        ${p.status === 'Rascunho' && podeTransicao('Aguardando Aprovação') ? `<button class="dropdown-item" onclick="mudarStatus(${p.id},'Aguardando Aprovação')">📨 Submeter para Aprovação</button>` : ''}
+        ${p.status === 'Aguardando Aprovação' && podeTransicao('Aprovada') ? `<button class="dropdown-item" onclick="aprovarPcdp(${p.id})">✅ Aprovar</button>` : ''}
+        ${p.status === 'Aguardando Aprovação' && podeTransicao('Rejeitada') ? `<button class="dropdown-item danger" onclick="abrirModalRejeitar(${p.id})">❌ Rejeitar</button>` : ''}
+        ${p.status === 'Aprovada' && podeTransicao('Em Viagem') ? `<button class="dropdown-item" onclick="mudarStatus(${p.id},'Em Viagem')">✈️ Iniciar Viagem</button>` : ''}
+        ${p.status === 'Em Viagem' && podeTransicao('Prestação de Contas') ? `<button class="dropdown-item" onclick="mudarStatus(${p.id},'Prestação de Contas')">📋 Abrir Prestação</button>` : ''}
+        ${!['Cancelada','Finalizada','Rejeitada'].includes(p.status) && podeTransicao('Cancelada') ? `<button class="dropdown-item danger" onclick="mudarStatus(${p.id},'Cancelada')">🚫 Cancelar</button>` : ''}
+        ${pf === 'admin' ? `<button class="dropdown-item danger" onclick="excluirPcdp(${p.id})">🗑 Excluir</button>` : ''}
       </div>
     </div>
   `;
@@ -1395,16 +1434,20 @@ function verDetalhesPcdp(id) {
     rejBloco.style.display = 'none';
   }
 
-  // Ações de status
+  // Ações de status (controladas por perfil)
   const acoes = document.getElementById('det-acoes-status');
   acoes.innerHTML = '';
-  if (p.status === 'Rascunho') acoes.innerHTML += `<button class="btn-secondary" onclick="mudarStatus(${p.id},'Aguardando Aprovação')">📨 Submeter</button>`;
-  if (p.status === 'Aguardando Aprovação') {
+  if (podeEditar(p)) acoes.innerHTML += `<button class="btn-secondary" onclick="editarPcdpCorrente()">✏️ Editar</button>`;
+  if (p.status === 'Rascunho' && podeTransicao('Aguardando Aprovação'))
+    acoes.innerHTML += `<button class="btn-secondary" onclick="mudarStatus(${p.id},'Aguardando Aprovação')">📨 Submeter</button>`;
+  if (p.status === 'Aguardando Aprovação' && podeTransicao('Aprovada'))
     acoes.innerHTML += `<button class="btn-primary" onclick="aprovarPcdp(${p.id})">✅ Aprovar</button>`;
+  if (p.status === 'Aguardando Aprovação' && podeTransicao('Rejeitada'))
     acoes.innerHTML += `<button class="btn-danger" onclick="abrirModalRejeitar(${p.id})">❌ Rejeitar</button>`;
-  }
-  if (p.status === 'Aprovada') acoes.innerHTML += `<button class="btn-primary" onclick="mudarStatus(${p.id},'Em Viagem')">✈️ Iniciar Viagem</button>`;
-  if (p.status === 'Em Viagem') acoes.innerHTML += `<button class="btn-primary" onclick="mudarStatus(${p.id},'Prestação de Contas')">📋 Abrir Prestação</button>`;
+  if (p.status === 'Aprovada' && podeTransicao('Em Viagem'))
+    acoes.innerHTML += `<button class="btn-primary" onclick="mudarStatus(${p.id},'Em Viagem')">✈️ Iniciar Viagem</button>`;
+  if (p.status === 'Em Viagem' && podeTransicao('Prestação de Contas'))
+    acoes.innerHTML += `<button class="btn-primary" onclick="mudarStatus(${p.id},'Prestação de Contas')">📋 Abrir Prestação</button>`;
 
   abrirModal('modal-det-pcdp');
 }
@@ -1661,7 +1704,9 @@ function editarUsuario(id) {
   document.getElementById('usr-login').disabled = true;
   document.getElementById('usr-senha').value = '';
   document.getElementById('usr-senha-label').textContent = '(deixe em branco para manter)';
-  document.getElementById('usr-perfil').value = u.perfil;
+  // garantir que o valor existe no select antes de setar
+  const selPerfil = document.getElementById('usr-perfil');
+  if ([...selPerfil.options].some(o => o.value === u.perfil)) selPerfil.value = u.perfil;
   const sel = document.getElementById('usr-setor');
   sel.innerHTML = '<option value="">— Nenhum —</option>' + setoresData.map(s => `<option ${u.setor === s ? 'selected' : ''}>${s}</option>`).join('');
   abrirModal('modal-usuario');
