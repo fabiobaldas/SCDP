@@ -948,7 +948,7 @@ async function verificarSessao() {
   }
 }
 
-function iniciarApp() {
+async function iniciarApp() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
 
@@ -993,6 +993,9 @@ function iniciarApp() {
     const el = document.getElementById(id);
     if (el) el.addEventListener('input', function() { maskData(this); });
   });
+
+  // Carrega setores logo após autenticar (falha silenciosamente antes do login)
+  try { setoresData = await api('GET', '/api/setores'); } catch (e) {}
 
   carregarDashboard();
 }
@@ -1114,7 +1117,10 @@ function kpiCard(label, value, cor, sub) {
 // ── PCDPs ──────────────────────────────────────────────────
 async function carregarPcdps() {
   try {
-    pcdpsData = await api('GET', '/api/pcdps');
+    [pcdpsData, setoresData] = await Promise.all([
+      api('GET', '/api/pcdps'),
+      api('GET', '/api/setores'),
+    ]);
     preencherSelectSetor('f-pcdp-setor', true);
     pagPcdp = 1;
     renderPcdps();
