@@ -182,13 +182,15 @@
             <select id="f-pcdp-status" onchange="renderPcdps()">
               <option value="">Todos os status</option>
               <option>Rascunho</option>
-              <option>Aguardando Aprovação</option>
-              <option>Aprovada</option>
-              <option>Rejeitada</option>
-              <option>Em Viagem</option>
-              <option>Prestação de Contas</option>
-              <option>Finalizada</option>
-              <option>Cancelada</option>
+              <option>Solicitado</option>
+              <option>Passagem Reservada</option>
+              <option>Viagem Aprovada</option>
+              <option>Rejeitado</option>
+              <option>Bilhete Emitido</option>
+              <option>Diárias Pagas</option>
+              <option>Prestando Contas</option>
+              <option>Prestação Aprovada</option>
+              <option>Cancelado</option>
             </select>
             <select id="f-pcdp-setor" onchange="renderPcdps()">
               <option value="">Todos os setores</option>
@@ -404,17 +406,18 @@
     <button onclick="toggleAjuda()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--texto-sec)">×</button>
   </div>
   <div style="overflow-y:auto;padding:12px 16px 16px;font-size:13px;color:var(--texto-sec);line-height:1.7">
-    <strong style="display:block;color:var(--texto);margin-bottom:6px">Status da PCDP</strong>
-    <p>🟡 <b>Rascunho</b> — em elaboração</p>
-    <p>🟠 <b>Aguardando Aprovação</b> — submetida ao aprovador</p>
-    <p>🟢 <b>Aprovada</b> — autorizada para viagem</p>
-    <p>🔴 <b>Rejeitada</b> — não autorizada</p>
-    <p>🟣 <b>Em Viagem</b> — servidor em deslocamento</p>
-    <p>🟤 <b>Prestação de Contas</b> — aguarda comprovantes</p>
-    <p>🔵 <b>Finalizada</b> — prestação aprovada</p>
-    <p>⚫ <b>Cancelada</b> — PCDP cancelada</p>
-    <strong style="display:block;color:var(--texto);margin:12px 0 6px">Fluxo recomendado</strong>
-    <p>Rascunho → Aguardando → Aprovada → Em Viagem → Prestação de Contas → Finalizada</p>
+    <strong style="display:block;color:var(--texto);margin-bottom:8px">Fluxo das 7 Etapas</strong>
+    <p>1️⃣ <b>Solicitar Viagem</b> — Servidor cria e submete a PCDP</p>
+    <p>2️⃣ <b>Reservar Passagem</b> — Secretaria reserva os bilhetes</p>
+    <p>3️⃣ <b>Aprovar Viagem</b> — Autorizador aprova (ou rejeita)</p>
+    <p>4️⃣ <b>Emitir Bilhete</b> — Secretaria emite o bilhete</p>
+    <p>5️⃣ <b>Pagar Diárias</b> — Secretaria realiza o pagamento</p>
+    <p>6️⃣ <b>Prestar Contas</b> — Servidor entrega os comprovantes</p>
+    <p>7️⃣ <b>Aprovar Prestação</b> — Autorizador finaliza o processo</p>
+    <strong style="display:block;color:var(--texto);margin:12px 0 6px">Quem faz o quê</strong>
+    <p>👤 <b>Servidor</b> — Solicitar, Prestar Contas</p>
+    <p>🖥️ <b>Secretaria</b> — Reservar, Emitir, Pagar</p>
+    <p>✅ <b>Autorizador</b> — Aprovar Viagem, Aprovar Prestação</p>
     <strong style="display:block;color:var(--texto);margin:12px 0 6px">Saldo da Prestação</strong>
     <p>🔴 Positivo = servidor deve devolver ao erário</p>
     <p>🟢 Negativo = erário deve complementar ao servidor</p>
@@ -1020,13 +1023,13 @@ function renderDashboard(d) {
     if (vencendo.length) alertasEl.innerHTML += `<div class="alert-box warn">⚠️ <div><strong>${vencendo.length} prestação(ões) vencendo em até 5 dias</strong> — Providencie os comprovantes.</div></div>`;
   }
 
-  // KPIs PCDPs
+  // KPIs PCDPs — novo fluxo
   document.getElementById('kpi-pcdps').innerHTML = `
-    ${kpiCard('Total de PCDPs', k.total, 'azul', 'Todas as propostas')}
-    ${kpiCard('Aguardando', k.aguardando, 'amarelo', 'Pendentes de aprovação')}
-    ${kpiCard('Aprovadas', k.aprovadas, 'verde', 'Autorizadas')}
-    ${kpiCard('Em Viagem', k.em_viagem, 'roxo', 'Em deslocamento')}
-    ${kpiCard('Prestação', k.prestando, 'amarelo', 'Aguardando comprovantes')}
+    ${kpiCard('Total', k.total, 'azul', 'Todas as PCDPs')}
+    ${kpiCard('Solicitadas', k.solicitado, 'amarelo', 'Aguardando reserva')}
+    ${kpiCard('Viagem Aprovada', k.vg_aprov, 'verde', 'Aguardando bilhete')}
+    ${kpiCard('Diárias Pagas', k.diarias_pg, 'roxo', 'Servidor em viagem')}
+    ${kpiCard('Prestando Contas', k.prestando, 'amarelo', 'Aguardando aprovação')}
   `;
 
   // KPIs Financeiro
@@ -1120,9 +1123,16 @@ async function carregarPcdps() {
 
 function statusBadgePcdp(s) {
   const map = {
-    'Rascunho': 'b-rascunho', 'Aguardando Aprovação': 'b-aguard', 'Aprovada': 'b-aprovada',
-    'Rejeitada': 'b-rejeit', 'Em Viagem': 'b-viagem', 'Prestação de Contas': 'b-prestac',
-    'Finalizada': 'b-finaliz', 'Cancelada': 'b-cancel',
+    'Rascunho':          'b-rascunho',
+    'Solicitado':        'b-solicit',
+    'Passagem Reservada':'b-reservada',
+    'Viagem Aprovada':   'b-vg-aprov',
+    'Rejeitado':         'b-rejeit',
+    'Bilhete Emitido':   'b-bilhete',
+    'Diárias Pagas':     'b-diarias',
+    'Prestando Contas':  'b-prestando',
+    'Prestação Aprovada':'b-pc-aprov',
+    'Cancelado':         'b-cancel',
   };
   return `<span class="badge ${map[s] || ''}">${s}</span>`;
 }
@@ -1190,14 +1200,16 @@ function renderPcdps() {
 function podeTransicao(status) {
   const pf = usuarioAtual?.perfil;
   const mapa = {
-    'Aguardando Aprovação': ['servidor','secretaria','admin'],
-    'Aprovada':             ['autorizador','admin'],
-    'Rejeitada':            ['autorizador','admin'],
-    'Em Viagem':            ['secretaria','admin'],
-    'Prestação de Contas':  ['secretaria','admin'],
-    'Finalizada':           ['secretaria','admin'],
-    'Cancelada':            ['servidor','secretaria','autorizador','admin'],
-    'Rascunho':             ['servidor','admin'],
+    'Solicitado':         ['servidor','secretaria','admin'],
+    'Passagem Reservada': ['secretaria','admin'],
+    'Viagem Aprovada':    ['autorizador','admin'],
+    'Rejeitado':          ['autorizador','admin'],
+    'Bilhete Emitido':    ['secretaria','admin'],
+    'Diárias Pagas':      ['secretaria','admin'],
+    'Prestando Contas':   ['servidor','secretaria','admin'],
+    'Prestação Aprovada': ['autorizador','admin'],
+    'Cancelado':          ['secretaria','autorizador','admin'],
+    'Rascunho':           ['servidor','admin'],
   };
   return mapa[status]?.includes(pf) ?? false;
 }
@@ -1221,12 +1233,15 @@ function dropdownAcoesPcdp(p) {
       <div class="dropdown-menu" id="${id}">
         <button class="dropdown-item" onclick="verDetalhesPcdp(${p.id})">👁 Ver Detalhes</button>
         ${podeEditar(p) ? `<button class="dropdown-item" onclick="editarPcdp(${p.id})">✏️ Editar</button>` : ''}
-        ${p.status === 'Rascunho' && podeTransicao('Aguardando Aprovação') ? `<button class="dropdown-item" onclick="mudarStatus(${p.id},'Aguardando Aprovação')">📨 Submeter para Aprovação</button>` : ''}
-        ${p.status === 'Aguardando Aprovação' && podeTransicao('Aprovada') ? `<button class="dropdown-item" onclick="aprovarPcdp(${p.id})">✅ Aprovar</button>` : ''}
-        ${p.status === 'Aguardando Aprovação' && podeTransicao('Rejeitada') ? `<button class="dropdown-item danger" onclick="abrirModalRejeitar(${p.id})">❌ Rejeitar</button>` : ''}
-        ${p.status === 'Aprovada' && podeTransicao('Em Viagem') ? `<button class="dropdown-item" onclick="mudarStatus(${p.id},'Em Viagem')">✈️ Iniciar Viagem</button>` : ''}
-        ${p.status === 'Em Viagem' && podeTransicao('Prestação de Contas') ? `<button class="dropdown-item" onclick="mudarStatus(${p.id},'Prestação de Contas')">📋 Abrir Prestação</button>` : ''}
-        ${!['Cancelada','Finalizada','Rejeitada'].includes(p.status) && podeTransicao('Cancelada') ? `<button class="dropdown-item danger" onclick="mudarStatus(${p.id},'Cancelada')">🚫 Cancelar</button>` : ''}
+        ${p.status === 'Rascunho'          && podeTransicao('Solicitado')         ? `<button class="dropdown-item" onclick="mudarStatus(${p.id},'Solicitado')">📨 Solicitar Viagem</button>` : ''}
+        ${p.status === 'Solicitado'        && podeTransicao('Passagem Reservada') ? `<button class="dropdown-item" onclick="mudarStatus(${p.id},'Passagem Reservada')">🎫 Reservar Passagem</button>` : ''}
+        ${p.status === 'Passagem Reservada'&& podeTransicao('Viagem Aprovada')    ? `<button class="dropdown-item" onclick="mudarStatus(${p.id},'Viagem Aprovada')">✅ Aprovar Viagem</button>` : ''}
+        ${p.status === 'Passagem Reservada'&& podeTransicao('Rejeitado')          ? `<button class="dropdown-item danger" onclick="abrirModalRejeitar(${p.id})">❌ Rejeitar</button>` : ''}
+        ${p.status === 'Viagem Aprovada'   && podeTransicao('Bilhete Emitido')    ? `<button class="dropdown-item" onclick="mudarStatus(${p.id},'Bilhete Emitido')">🎟️ Emitir Bilhete</button>` : ''}
+        ${p.status === 'Bilhete Emitido'   && podeTransicao('Diárias Pagas')      ? `<button class="dropdown-item" onclick="mudarStatus(${p.id},'Diárias Pagas')">💰 Pagar Diárias</button>` : ''}
+        ${p.status === 'Diárias Pagas'     && podeTransicao('Prestando Contas')   ? `<button class="dropdown-item" onclick="mudarStatus(${p.id},'Prestando Contas')">📋 Prestar Contas</button>` : ''}
+        ${p.status === 'Prestando Contas'  && podeTransicao('Prestação Aprovada') ? `<button class="dropdown-item" onclick="mudarStatus(${p.id},'Prestação Aprovada')">✅ Aprovar Prestação</button>` : ''}
+        ${!['Cancelado','Prestação Aprovada','Rejeitado'].includes(p.status) && podeTransicao('Cancelado') ? `<button class="dropdown-item danger" onclick="mudarStatus(${p.id},'Cancelado')">🚫 Cancelar</button>` : ''}
         ${pf === 'admin' ? `<button class="dropdown-item danger" onclick="excluirPcdp(${p.id})">🗑 Excluir</button>` : ''}
       </div>
     </div>
@@ -1437,17 +1452,24 @@ function verDetalhesPcdp(id) {
   // Ações de status (controladas por perfil)
   const acoes = document.getElementById('det-acoes-status');
   acoes.innerHTML = '';
-  if (podeEditar(p)) acoes.innerHTML += `<button class="btn-secondary" onclick="editarPcdpCorrente()">✏️ Editar</button>`;
-  if (p.status === 'Rascunho' && podeTransicao('Aguardando Aprovação'))
-    acoes.innerHTML += `<button class="btn-secondary" onclick="mudarStatus(${p.id},'Aguardando Aprovação')">📨 Submeter</button>`;
-  if (p.status === 'Aguardando Aprovação' && podeTransicao('Aprovada'))
-    acoes.innerHTML += `<button class="btn-primary" onclick="aprovarPcdp(${p.id})">✅ Aprovar</button>`;
-  if (p.status === 'Aguardando Aprovação' && podeTransicao('Rejeitada'))
+  if (podeEditar(p))
+    acoes.innerHTML += `<button class="btn-secondary" onclick="editarPcdpCorrente()">✏️ Editar</button>`;
+  if (p.status === 'Rascunho' && podeTransicao('Solicitado'))
+    acoes.innerHTML += `<button class="btn-primary" onclick="mudarStatus(${p.id},'Solicitado')">📨 Solicitar Viagem</button>`;
+  if (p.status === 'Solicitado' && podeTransicao('Passagem Reservada'))
+    acoes.innerHTML += `<button class="btn-primary" onclick="mudarStatus(${p.id},'Passagem Reservada')">🎫 Reservar Passagem</button>`;
+  if (p.status === 'Passagem Reservada' && podeTransicao('Viagem Aprovada'))
+    acoes.innerHTML += `<button class="btn-primary" onclick="mudarStatus(${p.id},'Viagem Aprovada')">✅ Aprovar Viagem</button>`;
+  if (p.status === 'Passagem Reservada' && podeTransicao('Rejeitado'))
     acoes.innerHTML += `<button class="btn-danger" onclick="abrirModalRejeitar(${p.id})">❌ Rejeitar</button>`;
-  if (p.status === 'Aprovada' && podeTransicao('Em Viagem'))
-    acoes.innerHTML += `<button class="btn-primary" onclick="mudarStatus(${p.id},'Em Viagem')">✈️ Iniciar Viagem</button>`;
-  if (p.status === 'Em Viagem' && podeTransicao('Prestação de Contas'))
-    acoes.innerHTML += `<button class="btn-primary" onclick="mudarStatus(${p.id},'Prestação de Contas')">📋 Abrir Prestação</button>`;
+  if (p.status === 'Viagem Aprovada' && podeTransicao('Bilhete Emitido'))
+    acoes.innerHTML += `<button class="btn-primary" onclick="mudarStatus(${p.id},'Bilhete Emitido')">🎟️ Emitir Bilhete</button>`;
+  if (p.status === 'Bilhete Emitido' && podeTransicao('Diárias Pagas'))
+    acoes.innerHTML += `<button class="btn-primary" onclick="mudarStatus(${p.id},'Diárias Pagas')">💰 Pagar Diárias</button>`;
+  if (p.status === 'Diárias Pagas' && podeTransicao('Prestando Contas'))
+    acoes.innerHTML += `<button class="btn-primary" onclick="mudarStatus(${p.id},'Prestando Contas')">📋 Prestar Contas</button>`;
+  if (p.status === 'Prestando Contas' && podeTransicao('Prestação Aprovada'))
+    acoes.innerHTML += `<button class="btn-primary" onclick="mudarStatus(${p.id},'Prestação Aprovada')">✅ Aprovar Prestação</button>`;
 
   abrirModal('modal-det-pcdp');
 }

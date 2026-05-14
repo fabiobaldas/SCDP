@@ -425,18 +425,22 @@ tbody td { padding: 10px 14px; vertical-align: middle; }
   white-space: nowrap;
 }
 
-.b-rascunho { background: #f0f1f3; color: #5a6072; }
-.b-aguard   { background: var(--amarelo-claro); color: var(--amarelo); }
-.b-aprovada { background: var(--verde-claro); color: var(--verde); }
-.b-rejeit   { background: var(--vermelho-claro); color: var(--vermelho); }
-.b-viagem   { background: #ede9fe; color: #6d28d9; }
-.b-prestac  { background: #fff7ed; color: #c2410c; }
-.b-finaliz  { background: var(--azul-claro); color: var(--azul-medio); }
-.b-cancel   { background: #f0f1f3; color: #8a91a0; }
-.b-pendente { background: var(--amarelo-claro); color: var(--amarelo); }
-.b-analise  { background: #ede9fe; color: #6d28d9; }
-.b-quitada  { background: var(--verde-claro); color: var(--verde); }
-.b-pendencias { background: var(--vermelho-claro); color: var(--vermelho); }
+/* ── Badges de status PCDP (novo fluxo 7 etapas) ── */
+.b-rascunho   { background: #f0f1f3;             color: #5a6072; }
+.b-solicit    { background: var(--amarelo-claro); color: var(--amarelo); }
+.b-reservada  { background: #dbeafe;             color: #1d4ed8; }
+.b-vg-aprov   { background: var(--verde-claro);  color: var(--verde); }
+.b-rejeit     { background: var(--vermelho-claro);color: var(--vermelho); }
+.b-bilhete    { background: #cffafe;             color: #0e7490; }
+.b-diarias    { background: #ede9fe;             color: #6d28d9; }
+.b-prestando  { background: #fff7ed;             color: #c2410c; }
+.b-pc-aprov   { background: #d1fae5;             color: #065f46; }
+.b-cancel     { background: #f0f1f3;             color: #8a91a0; }
+/* ── Badges de prestação de contas ── */
+.b-pendente   { background: var(--amarelo-claro); color: var(--amarelo); }
+.b-analise    { background: #ede9fe;             color: #6d28d9; }
+.b-quitada    { background: var(--verde-claro);  color: var(--verde); }
+.b-pendencias { background: var(--vermelho-claro);color: var(--vermelho); }
 
 /* ── MODAL ──────────────────────────────────────── */
 .modal-overlay {

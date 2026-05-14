@@ -482,20 +482,26 @@ app.patch('/api/pcdps/:id/status', auth, async (req, res) => {
     const id = parseInt(req.params.id);
     const { status, motivo_rejeicao, autorizado_por } = req.body;
 
-    const STATUS_VALIDOS = ['Rascunho','Aguardando Aprovação','Aprovada','Rejeitada','Em Viagem','Prestação de Contas','Finalizada','Cancelada'];
+    const STATUS_VALIDOS = [
+      'Rascunho','Solicitado','Passagem Reservada','Viagem Aprovada',
+      'Rejeitado','Bilhete Emitido','Diárias Pagas',
+      'Prestando Contas','Prestação Aprovada','Cancelado',
+    ];
     if (!STATUS_VALIDOS.includes(status)) return res.status(400).json({ erro: 'Status inválido' });
 
     // ── Controle de acesso por perfil ─────────────────────────
     const perfil = req.session.usuario.perfil;
     const TRANSICOES = {
-      'Aguardando Aprovação': ['servidor', 'secretaria', 'admin'],
-      'Aprovada':             ['autorizador', 'admin'],
-      'Rejeitada':            ['autorizador', 'admin'],
-      'Em Viagem':            ['secretaria', 'admin'],
-      'Prestação de Contas':  ['secretaria', 'admin'],
-      'Finalizada':           ['secretaria', 'admin'],
-      'Cancelada':            ['servidor', 'secretaria', 'autorizador', 'admin'],
-      'Rascunho':             ['servidor', 'admin'],
+      'Solicitado':         ['servidor', 'secretaria', 'admin'],   // Solicitar Viagem
+      'Passagem Reservada': ['secretaria', 'admin'],               // Reservar Passagem
+      'Viagem Aprovada':    ['autorizador', 'admin'],              // Aprovar Viagem
+      'Rejeitado':          ['autorizador', 'admin'],              // Rejeitar
+      'Bilhete Emitido':    ['secretaria', 'admin'],               // Emitir Bilhete
+      'Diárias Pagas':      ['secretaria', 'admin'],               // Pagar Diárias
+      'Prestando Contas':   ['servidor', 'secretaria', 'admin'],   // Prestar Contas
+      'Prestação Aprovada': ['autorizador', 'admin'],              // Aprovar Prestação
+      'Cancelado':          ['secretaria', 'autorizador', 'admin'],
+      'Rascunho':           ['servidor', 'admin'],
     };
     if (TRANSICOES[status] && !TRANSICOES[status].includes(perfil))
       return res.status(403).json({ erro: `Seu perfil não tem permissão para esta ação.` });
@@ -517,8 +523,8 @@ app.patch('/api/pcdps/:id/status', auth, async (req, res) => {
     const pcdp = await Pcdp.findOneAndUpdate({ id }, { $set: upd }, { new: true }).lean();
     if (!pcdp) return res.status(404).json({ erro: 'PCDP não encontrada' });
 
-    // Se mudou para "Prestação de Contas", cria/garante prestação vinculada
-    if (status === 'Prestação de Contas') {
+    // Se mudou para "Prestando Contas", cria/garante prestação vinculada
+    if (status === 'Prestando Contas') {
       const existe = await Prestacao.findOne({ pcdp_id: pcdp.id }).lean();
       if (!existe) {
         const pid = await nextId(Prestacao);
@@ -591,9 +597,9 @@ app.patch('/api/prestacoes/:id/status', auth, async (req, res) => {
     const prest = await Prestacao.findOneAndUpdate({ id }, { $set: upd }, { new: true }).lean();
     if (!prest) return res.status(404).json({ erro: 'Prestação não encontrada' });
 
-    // Se aprovada, finaliza a PCDP
+    // Se aprovada, marca a PCDP como Prestação Aprovada (etapa final)
     if (status === 'Aprovada') {
-      await Pcdp.findOneAndUpdate({ id: prest.pcdp_id }, { $set: { status: 'Finalizada', atualizado_em: agora() } });
+      await Pcdp.findOneAndUpdate({ id: prest.pcdp_id }, { $set: { status: 'Prestação Aprovada', atualizado_em: agora() } });
     }
 
     await registrarLog(req, 'prestacao', 'status', `Prestação de ${prest.pcdp_numero} → ${status}`);
@@ -618,16 +624,18 @@ app.get('/api/dashboard', auth, async (req, res) => {
       getSetores(),
     ]);
 
-    // KPIs gerais
-    const total      = pcdps.length;
-    const rascunho   = pcdps.filter(p => p.status === 'Rascunho').length;
-    const aguardando = pcdps.filter(p => p.status === 'Aguardando Aprovação').length;
-    const aprovadas  = pcdps.filter(p => p.status === 'Aprovada').length;
-    const rejeitadas = pcdps.filter(p => p.status === 'Rejeitada').length;
-    const em_viagem  = pcdps.filter(p => p.status === 'Em Viagem').length;
-    const prestando  = pcdps.filter(p => p.status === 'Prestação de Contas').length;
-    const finalizadas= pcdps.filter(p => p.status === 'Finalizada').length;
-    const canceladas = pcdps.filter(p => p.status === 'Cancelada').length;
+    // KPIs — novo fluxo de 7 etapas
+    const total       = pcdps.length;
+    const rascunho    = pcdps.filter(p => p.status === 'Rascunho').length;
+    const solicitado  = pcdps.filter(p => p.status === 'Solicitado').length;
+    const reservado   = pcdps.filter(p => p.status === 'Passagem Reservada').length;
+    const vg_aprov    = pcdps.filter(p => p.status === 'Viagem Aprovada').length;
+    const rejeitado   = pcdps.filter(p => p.status === 'Rejeitado').length;
+    const bilhete     = pcdps.filter(p => p.status === 'Bilhete Emitido').length;
+    const diarias_pg  = pcdps.filter(p => p.status === 'Diárias Pagas').length;
+    const prestando   = pcdps.filter(p => p.status === 'Prestando Contas').length;
+    const pc_aprov    = pcdps.filter(p => p.status === 'Prestação Aprovada').length;
+    const cancelado   = pcdps.filter(p => p.status === 'Cancelado').length;
 
     // KPIs financeiros
     const total_diarias   = pcdps.reduce((s, p) => s + (p.valor_diarias || 0), 0);
@@ -635,21 +643,23 @@ app.get('/api/dashboard', auth, async (req, res) => {
     const total_valor     = pcdps.reduce((s, p) => s + (p.valor_total || 0), 0);
 
     // Prestações
-    const prest_pendentes = prestacoes.filter(p => p.status === 'Pendente').length;
-    const prest_analise   = prestacoes.filter(p => p.status === 'Em análise').length;
-    const prest_aprovadas = prestacoes.filter(p => p.status === 'Aprovada').length;
-    const prest_pendencias= prestacoes.filter(p => p.status === 'Com pendências').length;
+    const prest_pendentes  = prestacoes.filter(p => p.status === 'Pendente').length;
+    const prest_analise    = prestacoes.filter(p => p.status === 'Em análise').length;
+    const prest_aprovadas  = prestacoes.filter(p => p.status === 'Aprovada').length;
+    const prest_pendencias = prestacoes.filter(p => p.status === 'Com pendências').length;
 
     // PCDPs por status (para gráfico)
     const por_status = [
-      { status: 'Rascunho', qtd: rascunho, cor: '#94a3b8' },
-      { status: 'Aguardando', qtd: aguardando, cor: '#f59e0b' },
-      { status: 'Aprovada', qtd: aprovadas, cor: '#10b981' },
-      { status: 'Em Viagem', qtd: em_viagem, cor: '#8b5cf6' },
-      { status: 'Prestação', qtd: prestando, cor: '#f97316' },
-      { status: 'Finalizada', qtd: finalizadas, cor: '#3b82f6' },
-      { status: 'Rejeitada', qtd: rejeitadas, cor: '#ef4444' },
-      { status: 'Cancelada', qtd: canceladas, cor: '#6b7280' },
+      { status: 'Rascunho',          qtd: rascunho,   cor: '#94a3b8' },
+      { status: 'Solicitado',        qtd: solicitado, cor: '#f59e0b' },
+      { status: 'Pass. Reservada',   qtd: reservado,  cor: '#3b82f6' },
+      { status: 'Viagem Aprovada',   qtd: vg_aprov,   cor: '#10b981' },
+      { status: 'Bilhete Emitido',   qtd: bilhete,    cor: '#06b6d4' },
+      { status: 'Diárias Pagas',     qtd: diarias_pg, cor: '#8b5cf6' },
+      { status: 'Prestando Contas',  qtd: prestando,  cor: '#f97316' },
+      { status: 'Prest. Aprovada',   qtd: pc_aprov,   cor: '#059669' },
+      { status: 'Rejeitado',         qtd: rejeitado,  cor: '#ef4444' },
+      { status: 'Cancelado',         qtd: cancelado,  cor: '#6b7280' },
     ].filter(x => x.qtd > 0);
 
     // PCDPs por setor (top 8)
@@ -694,8 +704,8 @@ app.get('/api/dashboard', auth, async (req, res) => {
 
     res.json({
       kpis: {
-        total, rascunho, aguardando, aprovadas, rejeitadas,
-        em_viagem, prestando, finalizadas, canceladas,
+        total, rascunho, solicitado, reservado, vg_aprov,
+        rejeitado, bilhete, diarias_pg, prestando, pc_aprov, cancelado,
         total_diarias, total_passagens, total_valor,
         prest_pendentes, prest_analise, prest_aprovadas, prest_pendencias,
       },
@@ -714,7 +724,7 @@ app.get('/api/dashboard', auth, async (req, res) => {
 app.get('/api/prazos', auth, async (req, res) => {
   try {
     const [pcdps, prestacoes] = await Promise.all([
-      Pcdp.find({ status: { $in: ['Aguardando Aprovação', 'Aprovada', 'Em Viagem', 'Prestação de Contas'] } }).lean(),
+      Pcdp.find({ status: { $in: ['Solicitado','Passagem Reservada','Viagem Aprovada','Bilhete Emitido','Diárias Pagas','Prestando Contas'] } }).lean(),
       Prestacao.find({ status: { $in: ['Pendente', 'Em análise', 'Com pendências'] } }).lean(),
     ]);
 
@@ -734,31 +744,25 @@ app.get('/api/prazos', auth, async (req, res) => {
       });
     });
 
-    pcdps.filter(p => p.status === 'Aguardando Aprovação').forEach(p => {
+    // PCDPs aguardando ação de secretaria ou autorizador
+    const ETAPAS_LABEL = {
+      'Solicitado':        'Aguardando Reserva de Passagem',
+      'Passagem Reservada':'Aguardando Aprovação de Viagem',
+      'Viagem Aprovada':   'Aguardando Emissão de Bilhete',
+      'Bilhete Emitido':   'Aguardando Pagamento de Diárias',
+      'Diárias Pagas':     'Aguardando Prestação de Contas',
+      'Prestando Contas':  'Aguardando Aprovação da Prestação',
+    };
+    pcdps.filter(p => ETAPAS_LABEL[p.status]).forEach(p => {
       itens.push({
-        tipo: 'aprovacao',
+        tipo: 'etapa',
         id: p.id,
         numero: p.numero,
-        titulo: `Aguardando Aprovação — ${p.servidor}`,
-        detalhe: `Destino: ${p.destino || '—'} · Saída: ${p.data_saida || '—'}`,
+        titulo: `${ETAPAS_LABEL[p.status]} — ${p.servidor}`,
+        detalhe: `Destino: ${p.destino || '—'} · ${p.data_saida || '—'} → ${p.data_retorno || '—'}`,
         dias: diasEntre(p.data_saida),
         status: p.status,
       });
-    });
-
-    pcdps.filter(p => p.status === 'Aprovada').forEach(p => {
-      const dias = diasEntre(p.data_saida);
-      if (dias !== null && dias <= 7) {
-        itens.push({
-          tipo: 'viagem',
-          id: p.id,
-          numero: p.numero,
-          titulo: `Viagem em ${dias <= 0 ? 'andamento' : dias + ' dia(s)'} — ${p.servidor}`,
-          detalhe: `Destino: ${p.destino || '—'} · ${p.data_saida} → ${p.data_retorno}`,
-          dias,
-          status: p.status,
-        });
-      }
     });
 
     itens.sort((a, b) => {
