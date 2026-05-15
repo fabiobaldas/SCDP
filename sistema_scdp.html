@@ -1566,22 +1566,63 @@ function toggleCamposFinanceiros() {
   if (temPassag) preencherRotaPassagem();
 }
 
-function preencherRotaPassagem() {
+// Aeroporto principal por UF (para auto-preencher destino)
+const AERO_PRINCIPAL_UF = {
+  AC:'RBR — Aeroporto Internacional de Rio Branco — Plácido de Castro (Rio Branco, AC)',
+  AL:'MCZ — Aeroporto Internacional de Maceió — Zumbi dos Palmares (Maceió, AL)',
+  AM:'MAO — Aeroporto Internacional de Manaus — Eduardo Gomes (Manaus, AM)',
+  AP:'MCP — Aeroporto Internacional de Macapá — Alberto Alcolumbre (Macapá, AP)',
+  BA:'SSA — Aeroporto Internacional de Salvador — Deputado Luís Eduardo (Salvador, BA)',
+  CE:'FOR — Aeroporto Internacional de Fortaleza — Pinto Martins (Fortaleza, CE)',
+  DF:'BSB — Aeroporto Internacional de Brasília — Presidente JK (Brasília, DF)',
+  ES:'VIX — Aeroporto Internacional de Vitória — Eurico de Aguiar Salles (Vitória, ES)',
+  GO:'GYN — Aeroporto Internacional de Goiânia — Santa Genoveva (Goiânia, GO)',
+  MA:'SLZ — Aeroporto Internacional de São Luís — Marechal Cunha Machado (São Luís, MA)',
+  MG:'CNF — Aeroporto Internacional de Belo Horizonte — Confins (Belo Horizonte, MG)',
+  MS:'CGR — Aeroporto Internacional de Campo Grande (Campo Grande, MS)',
+  MT:'CGB — Aeroporto Internacional de Cuiabá — Marechal Rondon (Cuiabá, MT)',
+  PA:'BEL — Aeroporto Internacional de Belém — Val de Cans (Belém, PA)',
+  PB:'JPA — Aeroporto Internacional de João Pessoa — Castro Pinto (João Pessoa, PB)',
+  PE:'REC — Aeroporto Internacional do Recife — Guararapes (Recife, PE)',
+  PI:'THE — Aeroporto Internacional de Teresina — Senador Petrônio Portella (Teresina, PI)',
+  PR:'CWB — Aeroporto Internacional de Curitiba — Afonso Pena (Curitiba, PR)',
+  RJ:'GIG — Aeroporto Internacional do Galeão — Tom Jobim (Rio de Janeiro, RJ)',
+  RN:'NAT — Aeroporto Internacional de Natal — São Gonçalo do Amarante (Natal, RN)',
+  RO:'PVH — Aeroporto Internacional de Porto Velho — Governador Jorge Teixeira (Porto Velho, RO)',
+  RR:'BVB — Aeroporto Internacional de Boa Vista — Atlas Brasil Cantanhede (Boa Vista, RR)',
+  RS:'POA — Aeroporto Internacional de Porto Alegre — Salgado Filho (Porto Alegre, RS)',
+  SC:'FLN — Aeroporto Internacional de Florianópolis — Hercílio Luz (Florianópolis, SC)',
+  SE:'AJU — Aeroporto Internacional de Aracaju — Santa Maria (Aracaju, SE)',
+  SP:'GRU — Aeroporto Internacional de Guarulhos (São Paulo, SP)',
+  TO:'PMW — Aeroporto de Palmas — Brigadeiro Lysias Rodrigues (Palmas, TO)',
+};
+
+async function preencherRotaPassagem() {
   const origem = document.getElementById('pcdp-origem-passagem');
-  // Origem: só preenche se estiver vazio
   if (!origem.value) origem.value = 'GIG — Aeroporto Internacional do Galeão — Tom Jobim (Rio de Janeiro, RJ)';
-  // Destino: tenta sugerir com base no destino principal da viagem
-  const dest  = document.getElementById('pcdp-destino-passagem');
-  if (!dest.value) {
-    const isInt = document.getElementById('pcdp-internacional').checked;
-    if (isInt) {
-      const cidade = document.getElementById('pcdp-cidade-int').value.trim();
-      const paisSel = document.getElementById('pcdp-pais-int');
-      const pais = paisSel.options[paisSel.selectedIndex]?.text || '';
-      if (cidade || pais) dest.value = [cidade, pais].filter(Boolean).join(' — ');
-    } else {
-      const uf = document.getElementById('pcdp-uf').value;
-      if (uf) dest.value = BR_LOCALIDADES.estados[uf] || uf;
+
+  const dest = document.getElementById('pcdp-destino-passagem');
+  if (dest.value) return; // não sobrescreve se já preenchido manualmente
+
+  const isInt = document.getElementById('pcdp-internacional').checked;
+  if (isInt) {
+    const cidade  = document.getElementById('pcdp-cidade-int').value.trim();
+    const paisSel = document.getElementById('pcdp-pais-int');
+    const pais    = paisSel.options[paisSel.selectedIndex]?.text || '';
+    if (cidade || pais) dest.value = [cidade, pais].filter(Boolean).join(' — ');
+  } else {
+    const uf = document.getElementById('pcdp-uf').value;
+    if (uf) {
+      // Usa mapeamento local primeiro
+      if (AERO_PRINCIPAL_UF[uf]) {
+        dest.value = AERO_PRINCIPAL_UF[uf];
+      } else {
+        // Fallback: busca via API
+        try {
+          const res = await api('GET', `/api/aeroportos?q=${uf}`);
+          if (res.length) dest.value = res[0].label;
+        } catch (_) {}
+      }
     }
   }
 }
