@@ -1602,8 +1602,6 @@ async function preencherRotaPassagem() {
   if (!origem.value) origem.value = 'GIG — Aeroporto Internacional do Galeão — Tom Jobim (Rio de Janeiro, RJ)';
 
   const dest = document.getElementById('pcdp-destino-passagem');
-  if (dest.value) return; // não sobrescreve se já preenchido manualmente
-
   const isInt = document.getElementById('pcdp-internacional').checked;
   if (!isInt) {
     const uf = document.getElementById('pcdp-uf').value;
