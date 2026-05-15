@@ -731,13 +731,17 @@
       </div>
       <div id="campos-passagens" style="display:none">
         <div class="form-row" style="margin-bottom:0">
-          <div class="form-group">
-            <label>Origem da Passagem</label>
-            <input type="text" id="pcdp-origem-passagem" class="form-input" placeholder="Ex: Rio de Janeiro — RJ">
+          <div class="form-group" style="position:relative">
+            <label>Aeroporto de Origem</label>
+            <input type="text" id="pcdp-origem-passagem" class="form-input" placeholder="Digite cidade, nome ou código (ex: GIG, Galeão...)"
+                   autocomplete="off" oninput="buscarAeroporto('origem')" onblur="setTimeout(()=>fecharAutoAero('origem'),200)">
+            <ul id="aero-origem-lista" class="autocomplete-lista"></ul>
           </div>
-          <div class="form-group">
-            <label>Destino da Passagem <span style="font-size:10px;color:var(--primary);font-weight:500">• preenchido automaticamente</span></label>
-            <input type="text" id="pcdp-destino-passagem" class="form-input" placeholder="Preenchido pelo destino da viagem">
+          <div class="form-group" style="position:relative">
+            <label>Aeroporto de Destino <span style="font-size:10px;color:var(--primary);font-weight:500">• preenchido automaticamente</span></label>
+            <input type="text" id="pcdp-destino-passagem" class="form-input" placeholder="Digite cidade, nome ou código (ex: BSB, Brasília...)"
+                   autocomplete="off" oninput="buscarAeroporto('destino')" onblur="setTimeout(()=>fecharAutoAero('destino'),200)">
+            <ul id="aero-destino-lista" class="autocomplete-lista"></ul>
           </div>
         </div>
         <div class="form-row">
@@ -1564,20 +1568,69 @@ function toggleCamposFinanceiros() {
 
 function preencherRotaPassagem() {
   const origem = document.getElementById('pcdp-origem-passagem');
-  const dest   = document.getElementById('pcdp-destino-passagem');
-  // Origem: só preenche se estiver vazio (não sobrescreve edição manual)
-  if (!origem.value) origem.value = 'Rio de Janeiro — RJ';
-  // Destino: auto-preenche sempre a partir do destino principal
-  const isInt = document.getElementById('pcdp-internacional').checked;
-  if (isInt) {
-    const cidade = document.getElementById('pcdp-cidade-int').value.trim();
-    const paisSel = document.getElementById('pcdp-pais-int');
-    const pais  = paisSel.options[paisSel.selectedIndex]?.text || '';
-    if (cidade || pais) dest.value = [cidade, pais].filter(Boolean).join(' — ');
-  } else {
-    const uf = document.getElementById('pcdp-uf').value;
-    if (uf) dest.value = `${BR_LOCALIDADES.estados[uf] || uf} — ${uf}`;
+  // Origem: só preenche se estiver vazio
+  if (!origem.value) origem.value = 'GIG — Aeroporto Internacional do Galeão — Tom Jobim (Rio de Janeiro, RJ)';
+  // Destino: tenta sugerir com base no destino principal da viagem
+  const dest  = document.getElementById('pcdp-destino-passagem');
+  if (!dest.value) {
+    const isInt = document.getElementById('pcdp-internacional').checked;
+    if (isInt) {
+      const cidade = document.getElementById('pcdp-cidade-int').value.trim();
+      const paisSel = document.getElementById('pcdp-pais-int');
+      const pais = paisSel.options[paisSel.selectedIndex]?.text || '';
+      if (cidade || pais) dest.value = [cidade, pais].filter(Boolean).join(' — ');
+    } else {
+      const uf = document.getElementById('pcdp-uf').value;
+      if (uf) dest.value = BR_LOCALIDADES.estados[uf] || uf;
+    }
   }
+}
+
+// ── AUTOCOMPLETE AEROPORTOS ─────────────────────────────────
+let _aeroTimer = {};
+
+async function buscarAeroporto(tipo) {
+  const inputId = tipo === 'origem' ? 'pcdp-origem-passagem' : 'pcdp-destino-passagem';
+  const listaId = tipo === 'origem' ? 'aero-origem-lista'    : 'aero-destino-lista';
+  const q = document.getElementById(inputId).value.trim();
+  const lista = document.getElementById(listaId);
+
+  if (q.length < 2) { lista.style.display = 'none'; return; }
+
+  clearTimeout(_aeroTimer[tipo]);
+  _aeroTimer[tipo] = setTimeout(async () => {
+    try {
+      lista.innerHTML = '<li style="padding:8px 14px;color:var(--texto-sec);font-size:12px">Buscando...</li>';
+      lista.style.display = 'block';
+      const res = await api('GET', `/api/aeroportos?q=${encodeURIComponent(q)}`);
+      if (!res.length) {
+        lista.innerHTML = '<li style="padding:8px 14px;color:var(--texto-ter);font-size:12px">Nenhum aeroporto encontrado</li>';
+        return;
+      }
+      lista.innerHTML = res.map(a => `
+        <li onmousedown="selecionarAeroporto('${tipo}', ${JSON.stringify(a.label).replace(/'/g,"\\'")})"
+            style="padding:9px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--azul-borda)">
+          <strong style="color:var(--primary)">${a.codigo}</strong>
+          — ${a.nome}
+          <span style="font-size:11px;color:var(--texto-sec)">${a.cidade ? ' · '+a.cidade : ''}</span>
+        </li>`).join('');
+    } catch (e) {
+      lista.innerHTML = '<li style="padding:8px 14px;color:var(--texto-ter);font-size:12px">Erro ao buscar</li>';
+    }
+  }, 280);
+}
+
+function selecionarAeroporto(tipo, label) {
+  const inputId = tipo === 'origem' ? 'pcdp-origem-passagem' : 'pcdp-destino-passagem';
+  const listaId = tipo === 'origem' ? 'aero-origem-lista'    : 'aero-destino-lista';
+  document.getElementById(inputId).value = label;
+  document.getElementById(listaId).style.display = 'none';
+}
+
+function fecharAutoAero(tipo) {
+  const listaId = tipo === 'origem' ? 'aero-origem-lista' : 'aero-destino-lista';
+  const el = document.getElementById(listaId);
+  if (el) el.style.display = 'none';
 }
 
 function maskData(el) {

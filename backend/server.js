@@ -1044,6 +1044,107 @@ app.post('/api/secretarias', admin, async (req, res) => {
 });
 
 // ════════════════════════════════════════════════════════════
+//  ROTAS — AEROPORTOS (proxy + lista BR)
+// ════════════════════════════════════════════════════════════
+const AEROPORTOS_BR = [
+  // Rio de Janeiro
+  { iata:'GIG', icao:'SBGL', nome:'Aeroporto Internacional do Galeão — Tom Jobim', cidade:'Rio de Janeiro', uf:'RJ' },
+  { iata:'SDU', icao:'SBRJ', nome:'Aeroporto Santos Dumont', cidade:'Rio de Janeiro', uf:'RJ' },
+  // São Paulo
+  { iata:'GRU', icao:'SBGR', nome:'Aeroporto Internacional de Guarulhos', cidade:'São Paulo', uf:'SP' },
+  { iata:'CGH', icao:'SBSP', nome:'Aeroporto de Congonhas', cidade:'São Paulo', uf:'SP' },
+  { iata:'VCP', icao:'SBKP', nome:'Aeroporto Internacional de Viracopos', cidade:'Campinas', uf:'SP' },
+  // Brasília
+  { iata:'BSB', icao:'SBBR', nome:'Aeroporto Internacional de Brasília — Presidente JK', cidade:'Brasília', uf:'DF' },
+  // Nordeste
+  { iata:'SSA', icao:'SBSV', nome:'Aeroporto Internacional de Salvador — Deputado Luís Eduardo', cidade:'Salvador', uf:'BA' },
+  { iata:'FOR', icao:'SBFZ', nome:'Aeroporto Internacional de Fortaleza — Pinto Martins', cidade:'Fortaleza', uf:'CE' },
+  { iata:'REC', icao:'SBRF', nome:'Aeroporto Internacional do Recife — Guararapes', cidade:'Recife', uf:'PE' },
+  { iata:'NAT', icao:'SBSG', nome:'Aeroporto Internacional de Natal — São Gonçalo do Amarante', cidade:'Natal', uf:'RN' },
+  { iata:'MCZ', icao:'SBMO', nome:'Aeroporto Internacional de Maceió — Zumbi dos Palmares', cidade:'Maceió', uf:'AL' },
+  { iata:'JPA', icao:'SBJP', nome:'Aeroporto Internacional de João Pessoa — Castro Pinto', cidade:'João Pessoa', uf:'PB' },
+  { iata:'THE', icao:'SBTE', nome:'Aeroporto Internacional de Teresina — Senador Petrônio Portella', cidade:'Teresina', uf:'PI' },
+  { iata:'SLZ', icao:'SBSL', nome:'Aeroporto Internacional de São Luís — Marechal Cunha Machado', cidade:'São Luís', uf:'MA' },
+  { iata:'AJU', icao:'SBAR', nome:'Aeroporto Internacional de Aracaju — Santa Maria', cidade:'Aracaju', uf:'SE' },
+  // Sul
+  { iata:'POA', icao:'SBPA', nome:'Aeroporto Internacional de Porto Alegre — Salgado Filho', cidade:'Porto Alegre', uf:'RS' },
+  { iata:'CWB', icao:'SBCT', nome:'Aeroporto Internacional de Curitiba — Afonso Pena', cidade:'Curitiba', uf:'PR' },
+  { iata:'FLN', icao:'SBFL', nome:'Aeroporto Internacional de Florianópolis — Hercílio Luz', cidade:'Florianópolis', uf:'SC' },
+  { iata:'IGU', icao:'SBFI', nome:'Aeroporto Internacional de Foz do Iguaçu — Cataratas', cidade:'Foz do Iguaçu', uf:'PR' },
+  { iata:'LDB', icao:'SBLO', nome:'Aeroporto de Londrina — Governador José Richa', cidade:'Londrina', uf:'PR' },
+  { iata:'MGF', icao:'SBMG', nome:'Aeroporto Regional de Maringá — Silvio Name Júnior', cidade:'Maringá', uf:'PR' },
+  // Sudeste
+  { iata:'CNF', icao:'SBCF', nome:'Aeroporto Internacional de Belo Horizonte — Confins', cidade:'Belo Horizonte', uf:'MG' },
+  { iata:'PLU', icao:'SBBH', nome:'Aeroporto da Pampulha — Carlos Drummond de Andrade', cidade:'Belo Horizonte', uf:'MG' },
+  { iata:'VIX', icao:'SBVT', nome:'Aeroporto Internacional de Vitória — Eurico de Aguiar Salles', cidade:'Vitória', uf:'ES' },
+  { iata:'UDI', icao:'SBUL', nome:'Aeroporto Internacional de Uberlândia — Ten. Cel. Av. César Bombonato', cidade:'Uberlândia', uf:'MG' },
+  // Norte
+  { iata:'MAO', icao:'SBEG', nome:'Aeroporto Internacional de Manaus — Eduardo Gomes', cidade:'Manaus', uf:'AM' },
+  { iata:'BEL', icao:'SBBE', nome:'Aeroporto Internacional de Belém — Val de Cans', cidade:'Belém', uf:'PA' },
+  { iata:'MCP', icao:'SBMQ', nome:'Aeroporto Internacional de Macapá — Alberto Alcolumbre', cidade:'Macapá', uf:'AP' },
+  { iata:'PVH', icao:'SBPV', nome:'Aeroporto Internacional de Porto Velho — Governador Jorge Teixeira', cidade:'Porto Velho', uf:'RO' },
+  { iata:'BVB', icao:'SBBV', nome:'Aeroporto Internacional de Boa Vista — Atlas Brasil Cantanhede', cidade:'Boa Vista', uf:'RR' },
+  { iata:'RBR', icao:'SBRB', nome:'Aeroporto Internacional de Rio Branco — Plácido de Castro', cidade:'Rio Branco', uf:'AC' },
+  { iata:'PMW', icao:'SBPJ', nome:'Aeroporto de Palmas — Brigadeiro Lysias Rodrigues', cidade:'Palmas', uf:'TO' },
+  { iata:'STM', icao:'SBSN', nome:'Aeroporto Internacional de Santarém — Maestro Wilson Fonseca', cidade:'Santarém', uf:'PA' },
+  // Centro-Oeste
+  { iata:'CGR', icao:'SBCG', nome:'Aeroporto Internacional de Campo Grande', cidade:'Campo Grande', uf:'MS' },
+  { iata:'CGB', icao:'SBCY', nome:'Aeroporto Internacional de Cuiabá — Marechal Rondon', cidade:'Cuiabá', uf:'MT' },
+  { iata:'GYN', icao:'SBGO', nome:'Aeroporto Internacional de Goiânia — Santa Genoveva', cidade:'Goiânia', uf:'GO' },
+  // Outros destinos relevantes
+  { iata:'BPS', icao:'SBBP', nome:'Aeroporto de Porto Seguro', cidade:'Porto Seguro', uf:'BA' },
+  { iata:'IOS', icao:'SBIL', nome:'Aeroporto Jorge Amado — Ilhéus', cidade:'Ilhéus', uf:'BA' },
+  { iata:'MNX', icao:'SBMY', nome:'Aeroporto de Manicoré', cidade:'Manicoré', uf:'AM' },
+];
+
+app.get('/api/aeroportos', auth, async (req, res) => {
+  const q = (req.query.q || '').toLowerCase().trim();
+  if (!q || q.length < 2) return res.json([]);
+
+  // Busca local nos aeroportos brasileiros
+  const locais = AEROPORTOS_BR.filter(a =>
+    a.iata?.toLowerCase().includes(q) ||
+    a.icao?.toLowerCase().includes(q) ||
+    a.nome.toLowerCase().includes(q) ||
+    a.cidade.toLowerCase().includes(q) ||
+    a.uf?.toLowerCase() === q
+  ).slice(0, 8).map(a => ({
+    codigo: a.iata || a.icao,
+    iata: a.iata,
+    icao: a.icao,
+    nome: a.nome,
+    cidade: a.cidade,
+    uf: a.uf,
+    label: `${a.iata || a.icao} — ${a.nome} (${a.cidade}${a.uf ? ', '+a.uf : ''})`,
+  }));
+
+  // Se parece um código IATA/ICAO e não achou localmente, tenta API externa
+  if (locais.length === 0 && /^[A-Za-z]{2,4}$/.test(q.trim())) {
+    try {
+      const code = q.toUpperCase();
+      const resp = await fetch(`https://airportsapi.com/api/airports/${code}`);
+      if (resp.ok) {
+        const data = await resp.json();
+        const a = data?.data?.attributes;
+        if (a?.name) {
+          locais.push({
+            codigo: a.iata_code || a.icao_code || code,
+            iata: a.iata_code,
+            icao: a.icao_code,
+            nome: a.name,
+            cidade: '',
+            uf: '',
+            label: `${a.iata_code || a.icao_code || code} — ${a.name}`,
+          });
+        }
+      }
+    } catch (_) { /* ignora falha de API externa */ }
+  }
+
+  res.json(locais);
+});
+
+// ════════════════════════════════════════════════════════════
 //  ROTAS — LOGS
 // ════════════════════════════════════════════════════════════
 app.get('/api/logs', admin, async (req, res) => {
