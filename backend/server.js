@@ -177,6 +177,19 @@ failedLoginSchema.index({ bloqueadoAte: 1 }, { expireAfterSeconds: 900 });
 
 const counterSchema = new Schema({ _id: String, seq: { type: Number, default: 0 } }, { versionKey: false });
 
+const solicitacaoSchema = new Schema({
+  id:           { type: Number, index: true },
+  nome:         String,
+  login:        String,
+  setor:        String,
+  justificativa:String,
+  perfil:       { type: String, default: 'servidor' },
+  status:       { type: String, default: 'Pendente' }, // Pendente | Aprovada | Rejeitada
+  criado_em:    String,
+  resolvido_em: String,
+  resolvido_por:String,
+}, { versionKey: false });
+
 const Usuario     = mongoose.model('Usuario',     usuarioSchema);
 const Pcdp        = mongoose.model('Pcdp',        pcdpSchema);
 const Prestacao   = mongoose.model('Prestacao',   prestacaoSchema);
@@ -184,6 +197,7 @@ const Log         = mongoose.model('Log',         logSchema);
 const Config      = mongoose.model('Config',      configSchema);
 const FailedLogin = mongoose.model('FailedLogin', failedLoginSchema);
 const Counter     = mongoose.model('Counter',     counterSchema);
+const Solicitacao = mongoose.model('Solicitacao', solicitacaoSchema);
 
 // ════════════════════════════════════════════════════════════
 //  HELPERS
@@ -801,6 +815,73 @@ app.get('/api/prazos', auth, async (req, res) => {
     console.error(e);
     res.status(500).json({ erro: 'Erro ao buscar prazos' });
   }
+});
+
+// ════════════════════════════════════════════════════════════
+//  ROTAS — SOLICITAÇÕES DE ACESSO (público)
+// ════════════════════════════════════════════════════════════
+app.post('/api/public/solicitar-acesso', async (req, res) => {
+  try {
+    const { nome, login, setor, justificativa, perfil } = req.body;
+    if (!nome || !login) return res.status(400).json({ erro: 'Nome e login são obrigatórios' });
+    const loginNorm = login.toLowerCase().trim();
+    const jaExiste = await Usuario.findOne({ login: loginNorm }).lean();
+    if (jaExiste) return res.status(409).json({ erro: 'Este login já está em uso no sistema' });
+    const jaSolicitou = await Solicitacao.findOne({ login: loginNorm, status: 'Pendente' }).lean();
+    if (jaSolicitou) return res.status(409).json({ erro: 'Já existe uma solicitação pendente para este login' });
+    const id = await nextId(Solicitacao);
+    await Solicitacao.create({
+      id, nome: nome.trim(), login: loginNorm,
+      setor: setor?.trim() || '',
+      justificativa: justificativa?.trim() || '',
+      perfil: perfil || 'servidor',
+      status: 'Pendente',
+      criado_em: agora(),
+    });
+    res.status(201).json({ ok: true });
+  } catch (e) { res.status(500).json({ erro: 'Erro ao registrar solicitação' }); }
+});
+
+app.get('/api/solicitacoes', admin, async (req, res) => {
+  try {
+    const lista = await Solicitacao.find({}).sort({ id: -1 }).lean();
+    res.json(lista);
+  } catch (e) { res.status(500).json({ erro: 'Erro ao buscar solicitações' }); }
+});
+
+app.patch('/api/solicitacoes/:id/aprovar', admin, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const s = await Solicitacao.findOne({ id }).lean();
+    if (!s) return res.status(404).json({ erro: 'Solicitação não encontrada' });
+    if (s.status !== 'Pendente') return res.status(400).json({ erro: 'Solicitação já foi resolvida' });
+    const jaExiste = await Usuario.findOne({ login: s.login }).lean();
+    if (jaExiste) {
+      await Solicitacao.updateOne({ id }, { $set: { status: 'Rejeitada', resolvido_em: agora(), resolvido_por: req.session.usuario.nome } });
+      return res.status(409).json({ erro: 'Login já existe. Solicitação rejeitada automaticamente.' });
+    }
+    const cores = ['#2563eb','#7c3aed','#059669','#d97706','#dc2626','#0891b2','#be185d','#65a30d'];
+    const total = await Usuario.countDocuments();
+    const senhaHash = await bcrypt.hash('Acesso@2026', 10);
+    const uid = await nextId(Usuario);
+    await Usuario.create({
+      id: uid, login: s.login, senha: senhaHash,
+      nome: s.nome, perfil: s.perfil || 'servidor',
+      setor: s.setor || '', cor: cores[total % cores.length],
+    });
+    await Solicitacao.updateOne({ id }, { $set: { status: 'Aprovada', resolvido_em: agora(), resolvido_por: req.session.usuario.nome } });
+    await registrarLog(req, 'usuario', 'criar', `Solicitação de ${s.login} aprovada → usuário criado (senha padrão)`);
+    res.json({ ok: true, senha_padrao: 'Acesso@2026' });
+  } catch (e) { res.status(500).json({ erro: 'Erro ao aprovar solicitação' }); }
+});
+
+app.patch('/api/solicitacoes/:id/rejeitar', admin, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    await Solicitacao.updateOne({ id }, { $set: { status: 'Rejeitada', resolvido_em: agora(), resolvido_por: req.session.usuario.nome } });
+    await registrarLog(req, 'usuario', 'rejeitar', `Solicitação id=${id} rejeitada`);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ erro: 'Erro ao rejeitar solicitação' }); }
 });
 
 // ════════════════════════════════════════════════════════════

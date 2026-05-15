@@ -36,7 +36,7 @@
       <button class="btn-login" id="btn-login" onclick="doLogin()">Acessar o Sistema</button>
 
       <div style="text-align:center;margin-top:16px">
-        <a href="#" onclick="return false;" style="color:var(--azul);font-size:13px;text-decoration:none;font-weight:500">
+        <a href="#" onclick="abrirModalSolicitarAcesso();return false;" style="color:var(--azul);font-size:13px;text-decoration:none;font-weight:500">
           Solicitar acesso ao sistema →
         </a>
       </div>
@@ -104,6 +104,11 @@
       <div class="nav-item" id="nav-usuarios" onclick="navigate('usuarios', this)">
         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="6" r="3"/><path d="M2 17a6 6 0 0112 0"/><circle cx="16" cy="8" r="2"/><path d="M16 12a4 4 0 014 4"/></svg>
         Usuários
+      </div>
+      <div class="nav-item" id="nav-solicitacoes" onclick="navigate('solicitacoes', this)" style="position:relative">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 5H5a2 2 0 00-2 2v8a2 2 0 002 2h10a2 2 0 002-2v-3M13 3h4v4M17 3l-7 7"/></svg>
+        Solicitações
+        <span id="nav-sol-badge" style="display:none;position:absolute;top:6px;right:10px;background:#dc2626;color:white;font-size:10px;font-weight:700;border-radius:100px;padding:1px 6px;min-width:18px;text-align:center"></span>
       </div>
       <div class="nav-item" id="nav-setores" onclick="navigate('setores', this)">
         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 5h14M3 10h10M3 15h6"/></svg>
@@ -371,6 +376,32 @@
         </div>
       </div>
 
+      <!-- ══════════ SOLICITAÇÕES DE ACESSO ══════════ -->
+      <div id="page-solicitacoes" style="display:none">
+        <div class="card">
+          <div class="card-header">
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="var(--azul-medio)" stroke-width="1.5"><path d="M9 5H5a2 2 0 00-2 2v8a2 2 0 002 2h10a2 2 0 002-2v-3M13 3h4v4M17 3l-7 7"/></svg>
+            <span class="card-title">Solicitações de Acesso</span>
+            <span class="card-count" id="sol-count"></span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr>
+                <th>Nome</th>
+                <th>Login</th>
+                <th>Perfil</th>
+                <th>Setor</th>
+                <th>Justificativa</th>
+                <th>Data</th>
+                <th>Status</th>
+                <th>Ações</th>
+              </tr></thead>
+              <tbody id="tbody-solicitacoes"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
       <!-- ══════════ SETORES ══════════ -->
       <div id="page-setores" style="display:none">
         <div class="card">
@@ -461,6 +492,79 @@
 
 <!-- ═══════════════ TOAST ═══════════════ -->
 <div class="toast" id="toast"></div>
+
+<!-- ═══════════════ MODAL SOLICITAR ACESSO (público) ═══════════════ -->
+<div class="modal-overlay" id="modal-solicitar-acesso">
+  <div class="modal-box modal-sm">
+    <div class="modal-head">
+      <h3>Solicitar Acesso ao SCDP</h3>
+      <button class="modal-close" onclick="fecharModal('modal-solicitar-acesso')">×</button>
+    </div>
+    <div class="modal-body" id="sol-form-body">
+      <p style="font-size:13px;color:var(--texto-sec);margin-bottom:20px;line-height:1.5">
+        Preencha o formulário abaixo. Após o envio, o administrador irá revisar sua solicitação e criar seu acesso.
+      </p>
+      <div class="form-group" style="margin-bottom:14px">
+        <label style="font-size:11px;font-weight:600;color:var(--texto-sec);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">Nome Completo *</label>
+        <input type="text" id="sol-nome" class="form-input" placeholder="Seu nome completo">
+      </div>
+      <div class="form-row" style="margin-bottom:14px">
+        <div class="form-group">
+          <label style="font-size:11px;font-weight:600;color:var(--texto-sec);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">Login desejado *</label>
+          <input type="text" id="sol-login" class="form-input" placeholder="ex: joao.silva">
+        </div>
+        <div class="form-group">
+          <label style="font-size:11px;font-weight:600;color:var(--texto-sec);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">Perfil solicitado</label>
+          <select id="sol-perfil" class="form-input">
+            <option value="servidor">Servidor</option>
+            <option value="secretaria">Secretaria</option>
+            <option value="autorizador">Autorizador</option>
+            <option value="visualizador">Visualizador</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:14px">
+        <label style="font-size:11px;font-weight:600;color:var(--texto-sec);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">Setor</label>
+        <input type="text" id="sol-setor" class="form-input" placeholder="Secretaria / Departamento">
+      </div>
+      <div class="form-group" style="margin-bottom:4px">
+        <label style="font-size:11px;font-weight:600;color:var(--texto-sec);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">Justificativa</label>
+        <input type="text" id="sol-justificativa" class="form-input" placeholder="Motivo da solicitação (opcional)">
+      </div>
+      <div id="sol-error" style="display:none;color:var(--vermelho);font-size:12px;margin-top:12px;padding:8px 12px;background:var(--vermelho-claro);border-radius:6px"></div>
+    </div>
+    <div id="sol-sucesso" style="display:none;padding:28px 24px;text-align:center">
+      <div style="font-size:36px;margin-bottom:12px">✅</div>
+      <div style="font-weight:600;font-size:15px;margin-bottom:8px">Solicitação enviada!</div>
+      <div style="font-size:13px;color:var(--texto-sec);line-height:1.6">Aguarde o administrador revisar e liberar seu acesso.<br>Assim que aprovado, você receberá o login e senha.</div>
+    </div>
+    <div class="modal-footer" id="sol-footer">
+      <button class="btn-cancel" onclick="fecharModal('modal-solicitar-acesso')">Cancelar</button>
+      <button class="btn-primary" onclick="enviarSolicitacaoAcesso()">Enviar Solicitação</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ MODAL APROVAR SOLICITAÇÃO (admin) ═══════════════ -->
+<div class="modal-overlay" id="modal-aprovar-sol">
+  <div class="modal-box modal-sm">
+    <div class="modal-head">
+      <h3>Aprovar Solicitação</h3>
+      <button class="modal-close" onclick="fecharModal('modal-aprovar-sol')">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="aprovar-sol-info" style="font-size:13px;color:var(--texto-sec);padding:12px;background:var(--azul-claro);border-radius:8px;line-height:1.7;margin-bottom:4px"></div>
+      <p style="font-size:12px;color:var(--texto-ter);margin-top:12px">
+        O usuário será criado com senha padrão <strong>Acesso@2026</strong>. Oriente-o a trocar a senha no primeiro acesso.
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="fecharModal('modal-aprovar-sol')">Cancelar</button>
+      <button class="btn-danger" style="margin-right:auto" onclick="rejeitarSolicitacao()">Rejeitar</button>
+      <button class="btn-primary" onclick="aprovarSolicitacao()">✅ Aprovar e Criar Usuário</button>
+    </div>
+  </div>
+</div>
 
 <!-- ═══════════════ MODAL PCDP ═══════════════ -->
 <div class="modal-overlay" id="modal-pcdp">
@@ -921,7 +1025,7 @@ function navigate(page, el) {
 
   const titulos = {
     dashboard: 'Painel Geral', pcdps: 'PCDPs', prestacao: 'Prestação de Contas',
-    prazos: 'Controle de Prazos', usuarios: 'Usuários', setores: 'Setores', logs: 'Logs do Sistema',
+    prazos: 'Controle de Prazos', usuarios: 'Usuários', solicitacoes: 'Solicitações de Acesso', setores: 'Setores', logs: 'Logs do Sistema',
   };
   document.getElementById('topbar-title').textContent = titulos[page] || page;
 
@@ -930,6 +1034,7 @@ function navigate(page, el) {
   if (page === 'prestacao') carregarPrestacoes();
   if (page === 'prazos') carregarPrazos();
   if (page === 'usuarios') carregarUsuarios();
+  if (page === 'solicitacoes') carregarSolicitacoes();
   if (page === 'setores') carregarSetores();
   if (page === 'logs') carregarLogs();
 
@@ -1001,7 +1106,7 @@ async function iniciarApp() {
   const pf = u.perfil;
 
   // Administração: só admin
-  ['nav-usuarios','nav-setores','nav-logs'].forEach(id => {
+  ['nav-usuarios','nav-solicitacoes','nav-setores','nav-logs'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = pf === 'admin' ? '' : 'none';
   });
@@ -1031,6 +1136,16 @@ async function iniciarApp() {
 
   // Carrega setores logo após autenticar (falha silenciosamente antes do login)
   try { setoresData = await api('GET', '/api/setores'); } catch (e) {}
+
+  // Carrega badge de solicitações pendentes (admin)
+  if (u.perfil === 'admin') {
+    try {
+      const sols = await api('GET', '/api/solicitacoes');
+      const pendentes = sols.filter(s => s.status === 'Pendente').length;
+      const badge = document.getElementById('nav-sol-badge');
+      if (badge && pendentes > 0) { badge.textContent = pendentes; badge.style.display = 'inline-block'; }
+    } catch (e) {}
+  }
 
   carregarDashboard();
 }
@@ -1835,6 +1950,104 @@ async function salvarSenha() {
     await api('PATCH', `/api/usuarios/${usuarioAtual.id}/senha`, { senha_atual: atual, nova_senha: nova });
     toast('Senha alterada com sucesso!');
     fecharModal('modal-alterar-senha');
+  } catch (e) { toast('Erro: ' + e.message); }
+}
+
+// ── SOLICITAR ACESSO (modal público) ───────────────────────
+function abrirModalSolicitarAcesso() {
+  ['sol-nome','sol-login','sol-setor','sol-justificativa'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('sol-perfil').value = 'servidor';
+  document.getElementById('sol-error').style.display = 'none';
+  document.getElementById('sol-form-body').style.display = '';
+  document.getElementById('sol-sucesso').style.display = 'none';
+  document.getElementById('sol-footer').style.display = '';
+  abrirModal('modal-solicitar-acesso');
+}
+
+async function enviarSolicitacaoAcesso() {
+  const nome         = document.getElementById('sol-nome').value.trim();
+  const login        = document.getElementById('sol-login').value.trim();
+  const setor        = document.getElementById('sol-setor').value.trim();
+  const justificativa= document.getElementById('sol-justificativa').value.trim();
+  const perfil       = document.getElementById('sol-perfil').value;
+  const errEl        = document.getElementById('sol-error');
+  errEl.style.display = 'none';
+  if (!nome) { errEl.textContent = 'Informe o nome completo.'; errEl.style.display = 'block'; return; }
+  if (!login){ errEl.textContent = 'Informe o login desejado.'; errEl.style.display = 'block'; return; }
+  try {
+    await fetch('/api/public/solicitar-acesso', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nome, login, setor, justificativa, perfil }),
+    }).then(async r => {
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.erro || 'Erro ao enviar');
+      return d;
+    });
+    document.getElementById('sol-form-body').style.display = 'none';
+    document.getElementById('sol-footer').style.display = 'none';
+    document.getElementById('sol-sucesso').style.display = 'block';
+  } catch (e) {
+    errEl.textContent = e.message;
+    errEl.style.display = 'block';
+  }
+}
+
+// ── SOLICITAÇÕES (admin) ────────────────────────────────────
+let solicitacaoCorrenteId = null;
+
+async function carregarSolicitacoes() {
+  try {
+    const lista = await api('GET', '/api/solicitacoes');
+    const pendentes = lista.filter(s => s.status === 'Pendente').length;
+    document.getElementById('sol-count').textContent = `${lista.length} solicitação(ões)`;
+    // badge na sidebar
+    const badge = document.getElementById('nav-sol-badge');
+    if (pendentes > 0) { badge.textContent = pendentes; badge.style.display = 'inline-block'; }
+    else badge.style.display = 'none';
+
+    const BADGE = { Pendente: 'b-solicit', Aprovada: 'b-vg-aprov', Rejeitada: 'b-rejeit' };
+    document.getElementById('tbody-solicitacoes').innerHTML = lista.map(s => `
+      <tr>
+        <td><strong>${s.nome}</strong></td>
+        <td class="td-mono">${s.login}</td>
+        <td>${s.perfil}</td>
+        <td>${s.setor || '—'}</td>
+        <td class="td-trunc" style="max-width:180px">${s.justificativa || '—'}</td>
+        <td class="td-mono" style="font-size:12px">${s.criado_em?.slice(0,10) || '—'}</td>
+        <td><span class="badge ${BADGE[s.status] || ''}">${s.status}</span></td>
+        <td>
+          ${s.status === 'Pendente' ? `<button class="btn-primary" style="font-size:12px;padding:4px 12px" onclick="abrirAprovarSolicitacao(${s.id},'${s.nome}','${s.login}','${s.perfil}','${s.setor||''}')">Revisar</button>` : `<span style="font-size:12px;color:var(--texto-ter)">${s.resolvido_por || '—'}</span>`}
+        </td>
+      </tr>
+    `).join('');
+  } catch (e) { toast('Erro ao carregar solicitações'); }
+}
+
+function abrirAprovarSolicitacao(id, nome, login, perfil, setor) {
+  solicitacaoCorrenteId = id;
+  document.getElementById('aprovar-sol-info').innerHTML =
+    `<strong>${nome}</strong><br>Login: <code>${login}</code> · Perfil: ${perfil}${setor ? ` · Setor: ${setor}` : ''}`;
+  abrirModal('modal-aprovar-sol');
+}
+
+async function aprovarSolicitacao() {
+  try {
+    const r = await api('PATCH', `/api/solicitacoes/${solicitacaoCorrenteId}/aprovar`);
+    fecharModal('modal-aprovar-sol');
+    toast(`✅ Usuário criado! Senha padrão: ${r.senha_padrao}`);
+    carregarSolicitacoes();
+    carregarUsuarios();
+  } catch (e) { toast('Erro: ' + e.message); }
+}
+
+async function rejeitarSolicitacao() {
+  if (!confirm('Rejeitar esta solicitação?')) return;
+  try {
+    await api('PATCH', `/api/solicitacoes/${solicitacaoCorrenteId}/rejeitar`);
+    fecharModal('modal-aprovar-sol');
+    toast('Solicitação rejeitada.');
+    carregarSolicitacoes();
   } catch (e) { toast('Erro: ' + e.message); }
 }
 
