@@ -1642,7 +1642,8 @@ async function buscarAeroporto(tipo) {
         return;
       }
       lista.innerHTML = res.map(a => `
-        <li onmousedown="selecionarAeroporto('${tipo}', ${JSON.stringify(a.label).replace(/'/g,"\\'")})"
+        <li data-tipo="${tipo}" data-label="${a.label.replace(/"/g,'&quot;')}"
+            onmousedown="selecionarAeroporto(this)"
             style="padding:9px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--azul-borda)">
           <strong style="color:var(--primary)">${a.codigo}</strong>
           — ${a.nome}
@@ -1654,7 +1655,9 @@ async function buscarAeroporto(tipo) {
   }, 280);
 }
 
-function selecionarAeroporto(tipo, label) {
+function selecionarAeroporto(el) {
+  const tipo    = el.dataset.tipo;
+  const label   = el.dataset.label;
   const inputId = tipo === 'origem' ? 'pcdp-origem-passagem' : 'pcdp-destino-passagem';
   const listaId = tipo === 'origem' ? 'aero-origem-lista'    : 'aero-destino-lista';
   document.getElementById(inputId).value = label;
