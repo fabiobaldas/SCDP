@@ -391,6 +391,7 @@
                 <th>Nome do Servidor</th>
                 <th>Matrícula</th>
                 <th>CPF</th>
+                <th>Secretaria</th>
                 <th>Setor</th>
                 <th>Data</th>
                 <th>Status</th>
@@ -402,17 +403,37 @@
         </div>
       </div>
 
-      <!-- ══════════ SETORES ══════════ -->
+      <!-- ══════════ SETORES & SECRETARIAS ══════════ -->
       <div id="page-setores" style="display:none">
+        <!-- Secretarias -->
+        <div class="card" style="margin-bottom:20px">
+          <div class="card-header">
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="var(--azul-medio)" stroke-width="1.5"><path d="M3 3h14v4H3zM3 9h14v4H3zM3 15h8v2H3z"/></svg>
+            <span class="card-title">Secretarias</span>
+          </div>
+          <div style="padding:20px">
+            <p style="font-size:13px;color:var(--texto-sec);margin-bottom:14px">Cadastre as secretarias da prefeitura. Os servidores selecionarão a secretaria ao solicitar acesso.</p>
+            <div id="secretarias-lista" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px"></div>
+            <div style="display:flex;gap:10px;align-items:center">
+              <input type="text" id="secretaria-novo-input" placeholder="Ex: Secretaria de Obras" class="form-input" style="max-width:360px;margin-top:0" onkeydown="if(event.key==='Enter')adicionarSecretaria()">
+              <button class="btn-primary" onclick="adicionarSecretaria()">Adicionar</button>
+            </div>
+            <div style="margin-top:16px">
+              <button class="btn-secondary" onclick="salvarSecretarias()">Salvar alterações</button>
+            </div>
+          </div>
+        </div>
+        <!-- Setores -->
         <div class="card">
           <div class="card-header">
             <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="var(--azul-medio)" stroke-width="1.5"><path d="M3 5h14M3 10h10M3 15h6"/></svg>
-            <span class="card-title">Setores Cadastrados</span>
+            <span class="card-title">Setores / Departamentos</span>
           </div>
           <div style="padding:20px">
+            <p style="font-size:13px;color:var(--texto-sec);margin-bottom:14px">Cadastre os setores e departamentos. Os servidores selecionarão o setor ao solicitar acesso.</p>
             <div id="setores-lista" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px"></div>
             <div style="display:flex;gap:10px;align-items:center">
-              <input type="text" id="setor-novo-input" placeholder="Nome do novo setor" class="form-input" style="max-width:320px;margin-top:0" onkeydown="if(event.key==='Enter')adicionarSetor()">
+              <input type="text" id="setor-novo-input" placeholder="Ex: Departamento de Licitações" class="form-input" style="max-width:360px;margin-top:0" onkeydown="if(event.key==='Enter')adicionarSetor()">
               <button class="btn-primary" onclick="adicionarSetor()">Adicionar</button>
             </div>
             <div style="margin-top:16px">
@@ -518,13 +539,22 @@
           <input type="text" id="sol-cpf" class="form-input" placeholder="000.000.000-00" maxlength="14" oninput="maskCPF(this)">
         </div>
       </div>
+      <div class="form-group" style="margin-bottom:14px">
+        <label style="font-size:11px;font-weight:600;color:var(--texto-sec);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">Secretaria *</label>
+        <select id="sol-secretaria" class="form-input">
+          <option value="">— Carregando... —</option>
+        </select>
+        <div id="sol-secretaria-aviso" style="display:none;font-size:11px;color:var(--texto-ter);margin-top:4px">
+          Nenhuma secretaria cadastrada. Aguarde o administrador configurar.
+        </div>
+      </div>
       <div class="form-group" style="margin-bottom:4px">
-        <label style="font-size:11px;font-weight:600;color:var(--texto-sec);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">Secretaria / Setor *</label>
+        <label style="font-size:11px;font-weight:600;color:var(--texto-sec);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">Setor / Departamento *</label>
         <select id="sol-setor" class="form-input">
-          <option value="">— Carregando setores... —</option>
+          <option value="">— Carregando... —</option>
         </select>
         <div id="sol-setor-aviso" style="display:none;font-size:11px;color:var(--texto-ter);margin-top:4px">
-          Nenhum setor cadastrado. Aguarde o administrador configurar os setores do sistema.
+          Nenhum setor cadastrado. Aguarde o administrador configurar.
         </div>
       </div>
       <div id="sol-error" style="display:none;color:var(--vermelho);font-size:12px;margin-top:12px;padding:8px 12px;background:var(--vermelho-claro);border-radius:6px"></div>
@@ -1974,41 +2004,63 @@ async function abrirModalSolicitarAcesso() {
   document.getElementById('sol-footer').style.display = '';
   abrirModal('modal-solicitar-acesso');
 
-  // Carrega setores via API pública (sem autenticação)
-  const sel = document.getElementById('sol-setor');
-  const aviso = document.getElementById('sol-setor-aviso');
-  sel.innerHTML = '<option value="">— Carregando... —</option>';
+  // Carrega secretarias e setores em paralelo via API pública (sem autenticação)
+  const selSec  = document.getElementById('sol-secretaria');
+  const avisoSec = document.getElementById('sol-secretaria-aviso');
+  const selSet  = document.getElementById('sol-setor');
+  const avisoSet = document.getElementById('sol-setor-aviso');
+  selSec.innerHTML = '<option value="">— Carregando... —</option>';
+  selSet.innerHTML = '<option value="">— Carregando... —</option>';
+
   try {
-    const setores = await fetch('/api/public/setores').then(r => r.json());
-    if (!setores.length) {
-      sel.innerHTML = '<option value="">— Nenhum setor disponível —</option>';
-      aviso.style.display = 'block';
+    const [secretarias, setores] = await Promise.all([
+      fetch('/api/public/secretarias').then(r => r.json()),
+      fetch('/api/public/setores').then(r => r.json()),
+    ]);
+
+    // Secretarias
+    if (!secretarias.length) {
+      selSec.innerHTML = '<option value="">— Nenhuma secretaria disponível —</option>';
+      avisoSec.style.display = 'block';
     } else {
-      aviso.style.display = 'none';
-      sel.innerHTML = '<option value="">— Selecione sua secretaria / setor —</option>' +
+      avisoSec.style.display = 'none';
+      selSec.innerHTML = '<option value="">— Selecione a secretaria —</option>' +
+        secretarias.map(s => `<option>${s}</option>`).join('');
+    }
+
+    // Setores
+    if (!setores.length) {
+      selSet.innerHTML = '<option value="">— Nenhum setor disponível —</option>';
+      avisoSet.style.display = 'block';
+    } else {
+      avisoSet.style.display = 'none';
+      selSet.innerHTML = '<option value="">— Selecione o setor —</option>' +
         setores.map(s => `<option>${s}</option>`).join('');
     }
   } catch (e) {
-    sel.innerHTML = '<option value="">— Erro ao carregar setores —</option>';
+    selSec.innerHTML = '<option value="">— Erro ao carregar —</option>';
+    selSet.innerHTML = '<option value="">— Erro ao carregar —</option>';
   }
 }
 
 async function enviarSolicitacaoAcesso() {
-  const nome      = document.getElementById('sol-nome').value.trim();
-  const matricula = document.getElementById('sol-matricula').value.trim();
-  const cpf       = document.getElementById('sol-cpf').value.trim();
-  const setor     = document.getElementById('sol-setor').value.trim();
-  const errEl     = document.getElementById('sol-error');
+  const nome       = document.getElementById('sol-nome').value.trim();
+  const matricula  = document.getElementById('sol-matricula').value.trim();
+  const cpf        = document.getElementById('sol-cpf').value.trim();
+  const secretaria = document.getElementById('sol-secretaria').value.trim();
+  const setor      = document.getElementById('sol-setor').value.trim();
+  const errEl      = document.getElementById('sol-error');
   errEl.style.display = 'none';
-  if (!nome)      { errEl.textContent = 'Informe o nome do servidor.';       errEl.style.display = 'block'; return; }
-  if (!matricula) { errEl.textContent = 'Informe a matrícula.';              errEl.style.display = 'block'; return; }
-  if (!cpf)       { errEl.textContent = 'Informe o CPF.';                   errEl.style.display = 'block'; return; }
-  if (!setor)     { errEl.textContent = 'Selecione a secretaria / setor.';  errEl.style.display = 'block'; return; }
+  if (!nome)       { errEl.textContent = 'Informe o nome do servidor.';    errEl.style.display = 'block'; return; }
+  if (!matricula)  { errEl.textContent = 'Informe a matrícula.';           errEl.style.display = 'block'; return; }
+  if (!cpf)        { errEl.textContent = 'Informe o CPF.';                 errEl.style.display = 'block'; return; }
+  if (!secretaria) { errEl.textContent = 'Selecione a secretaria.';        errEl.style.display = 'block'; return; }
+  if (!setor)      { errEl.textContent = 'Selecione o setor.';             errEl.style.display = 'block'; return; }
   try {
     await fetch('/api/public/solicitar-acesso', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nome, matricula, cpf, setor, perfil: 'servidor' }),
+      body: JSON.stringify({ nome, matricula, cpf, secretaria, setor, perfil: 'servidor' }),
     }).then(async r => {
       const d = await r.json();
       if (!r.ok) throw new Error(d.erro || 'Erro ao enviar');
@@ -2043,6 +2095,7 @@ async function carregarSolicitacoes() {
         <td><strong>${s.nome}</strong></td>
         <td class="td-mono">${s.matricula || s.login}</td>
         <td class="td-mono">${s.cpf || '—'}</td>
+        <td>${s.secretaria || '—'}</td>
         <td>${s.setor || '—'}</td>
         <td class="td-mono" style="font-size:12px">${s.criado_em?.slice(0,10) || '—'}</td>
         <td><span class="badge ${BADGE[s.status] || ''}">${s.status}</span></td>
@@ -2057,6 +2110,7 @@ async function carregarSolicitacoes() {
 }
 
 let solicitacoesData = [];
+let secretariasData  = [];
 
 function abrirAprovarSolicitacao(id) {
   solicitacaoCorrenteId = id;
@@ -2065,6 +2119,7 @@ function abrirAprovarSolicitacao(id) {
     <strong>${s.nome || '—'}</strong><br>
     Matrícula: <code>${s.matricula || s.login || '—'}</code> &nbsp;·&nbsp;
     CPF: <code>${s.cpf || '—'}</code><br>
+    Secretaria: ${s.secretaria || '—'}<br>
     Setor: ${s.setor || '—'}
   `;
   abrirModal('modal-aprovar-sol');
@@ -2090,12 +2145,56 @@ async function rejeitarSolicitacao() {
   } catch (e) { toast('Erro: ' + e.message); }
 }
 
+// ── SECRETARIAS ────────────────────────────────────────────
+async function carregarSecretarias() {
+  try {
+    secretariasData = await api('GET', '/api/secretarias');
+    renderSecretarias();
+  } catch (e) { toast('Erro ao carregar secretarias'); }
+}
+
+function renderSecretarias() {
+  const lista = document.getElementById('secretarias-lista');
+  if (!lista) return;
+  lista.innerHTML = secretariasData.map((s, i) => `
+    <div style="display:flex;align-items:center;gap:6px;background:var(--azul-claro);border:1px solid var(--azul-borda);padding:6px 12px;border-radius:20px;font-size:13px">
+      ${s}
+      <button onclick="removerSecretaria(${i})" style="background:none;border:none;cursor:pointer;color:var(--texto-sec);font-size:16px;line-height:1;padding:0 2px" title="Remover">×</button>
+    </div>
+  `).join('');
+}
+
+function adicionarSecretaria() {
+  const input = document.getElementById('secretaria-novo-input');
+  const nome = input.value.trim();
+  if (!nome || secretariasData.includes(nome)) { toast('Secretaria inválida ou já existe'); return; }
+  secretariasData.push(nome);
+  input.value = '';
+  renderSecretarias();
+}
+
+function removerSecretaria(i) {
+  secretariasData.splice(i, 1);
+  renderSecretarias();
+}
+
+async function salvarSecretarias() {
+  try {
+    await api('POST', '/api/secretarias', { secretarias: secretariasData });
+    toast('Secretarias salvas!');
+  } catch (e) { toast('Erro: ' + e.message); }
+}
+
 // ── SETORES ────────────────────────────────────────────────
 async function carregarSetores() {
   try {
-    setoresData = await api('GET', '/api/setores');
+    [setoresData, secretariasData] = await Promise.all([
+      api('GET', '/api/setores'),
+      api('GET', '/api/secretarias'),
+    ]);
     renderSetores();
-  } catch (e) { toast('Erro ao carregar setores'); }
+    renderSecretarias();
+  } catch (e) { toast('Erro ao carregar setores/secretarias'); }
 }
 
 function renderSetores() {

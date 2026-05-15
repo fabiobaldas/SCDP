@@ -91,6 +91,7 @@ const usuarioSchema = new Schema({
   cor:         String,
   matricula:   String,
   cpf:         String,
+  secretaria:  String,
   setor:       String,
 }, { versionKey: false });
 
@@ -184,6 +185,7 @@ const solicitacaoSchema = new Schema({
   login:        String,
   matricula:    String,
   cpf:          String,
+  secretaria:   String,
   setor:        String,
   justificativa:String,
   perfil:       { type: String, default: 'servidor' },
@@ -216,6 +218,11 @@ async function nextId(Model) {
 
 async function getSetores() {
   const cfg = await Config.findOne({ chave: 'setores' }).lean();
+  return cfg ? (cfg.valor || []) : [];
+}
+
+async function getSecretarias() {
+  const cfg = await Config.findOne({ chave: 'secretarias' }).lean();
   return cfg ? (cfg.valor || []) : [];
 }
 
@@ -436,7 +443,7 @@ app.post('/api/login', loginLimiter, async (req, res) => {
     }
 
     await FailedLogin.deleteOne({ _id: loginNorm });
-    req.session.usuario = { id: u.id, login: u.login, nome: u.nome, perfil: u.perfil, cor: u.cor, matricula: u.matricula || '', cpf: u.cpf || '', setor: u.setor || '' };
+    req.session.usuario = { id: u.id, login: u.login, nome: u.nome, perfil: u.perfil, cor: u.cor, matricula: u.matricula || '', cpf: u.cpf || '', secretaria: u.secretaria || '', setor: u.setor || '' };
     await registrarLog(req, 'auth', 'login', `Login de ${u.login}`);
     res.json({ ok: true, usuario: req.session.usuario });
   } catch (e) {
@@ -838,17 +845,21 @@ app.get('/api/prazos', auth, async (req, res) => {
 //  ROTAS — SOLICITAÇÕES DE ACESSO (público)
 // ════════════════════════════════════════════════════════════
 app.get('/api/public/setores', async (req, res) => {
-  try { res.json(await getSetores()); }
-  catch (e) { res.json([]); }
+  try { res.json(await getSetores()); } catch (e) { res.json([]); }
+});
+
+app.get('/api/public/secretarias', async (req, res) => {
+  try { res.json(await getSecretarias()); } catch (e) { res.json([]); }
 });
 
 app.post('/api/public/solicitar-acesso', async (req, res) => {
   try {
-    const { nome, matricula, cpf, setor, justificativa, perfil } = req.body;
-    if (!nome)      return res.status(400).json({ erro: 'Nome é obrigatório' });
-    if (!cpf)       return res.status(400).json({ erro: 'CPF é obrigatório' });
-    if (!matricula) return res.status(400).json({ erro: 'Matrícula é obrigatória' });
-    if (!setor)     return res.status(400).json({ erro: 'Setor é obrigatório' });
+    const { nome, matricula, cpf, secretaria, setor, justificativa, perfil } = req.body;
+    if (!nome)       return res.status(400).json({ erro: 'Nome é obrigatório' });
+    if (!cpf)        return res.status(400).json({ erro: 'CPF é obrigatório' });
+    if (!matricula)  return res.status(400).json({ erro: 'Matrícula é obrigatória' });
+    if (!secretaria) return res.status(400).json({ erro: 'Secretaria é obrigatória' });
+    if (!setor)      return res.status(400).json({ erro: 'Setor é obrigatório' });
     // CPF normalizado (só dígitos) é o login do usuário
     const loginNorm = cpf.replace(/\D/g, '');
     if (loginNorm.length !== 11) return res.status(400).json({ erro: 'CPF inválido — informe os 11 dígitos' });
@@ -859,8 +870,9 @@ app.post('/api/public/solicitar-acesso', async (req, res) => {
     const id = await nextId(Solicitacao);
     await Solicitacao.create({
       id, nome: nome.trim(), login: loginNorm,
-      matricula: (matricula || login).trim(),
+      matricula: matricula.trim(),
       cpf: cpf.trim(),
+      secretaria: secretaria.trim(),
       setor: setor.trim(),
       justificativa: justificativa?.trim() || '',
       perfil: perfil || 'servidor',
@@ -898,6 +910,7 @@ app.patch('/api/solicitacoes/:id/aprovar', admin, async (req, res) => {
       nome: s.nome, perfil: s.perfil || 'servidor',
       matricula: s.matricula || s.login,
       cpf: s.cpf || '',
+      secretaria: s.secretaria || '',
       setor: s.setor || '', cor: cores[total % cores.length],
     });
     await Solicitacao.updateOne({ id }, { $set: { status: 'Aprovada', resolvido_em: agora(), resolvido_por: req.session.usuario.nome } });
@@ -1007,6 +1020,23 @@ app.post('/api/setores', admin, async (req, res) => {
     await registrarLog(req, 'config', 'setores', 'Setores atualizados');
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ erro: 'Erro ao salvar setores' }); }
+});
+
+// ════════════════════════════════════════════════════════════
+//  ROTAS — SECRETARIAS
+// ════════════════════════════════════════════════════════════
+app.get('/api/secretarias', auth, async (req, res) => {
+  res.json(await getSecretarias());
+});
+
+app.post('/api/secretarias', admin, async (req, res) => {
+  try {
+    const { secretarias } = req.body;
+    if (!Array.isArray(secretarias)) return res.status(400).json({ erro: 'secretarias deve ser array' });
+    await Config.updateOne({ chave: 'secretarias' }, { valor: secretarias.map(s => s.trim()).filter(Boolean) }, { upsert: true });
+    await registrarLog(req, 'config', 'secretarias', 'Secretarias atualizadas');
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ erro: 'Erro ao salvar secretarias' }); }
 });
 
 // ════════════════════════════════════════════════════════════
