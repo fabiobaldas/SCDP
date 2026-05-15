@@ -266,12 +266,21 @@ function pick(obj, campos) {
 // ════════════════════════════════════════════════════════════
 //  ADMIN PADRÃO
 // ════════════════════════════════════════════════════════════
+const ADMIN_CPF = '11111111193'; // CPF do admin: 111.111.111-93
+
 async function garantirAdmin() {
-  const existe = await Usuario.findOne({ login: 'admin' }).lean();
+  // Migrar admin antigo (login='admin') para CPF
+  const adminAntigo = await Usuario.findOne({ login: 'admin' }).lean();
+  if (adminAntigo) {
+    await Usuario.updateOne({ login: 'admin' }, { $set: { login: ADMIN_CPF, cpf: '111.111.111-93' } });
+    console.log(`✅ Admin migrado: login "admin" → CPF ${ADMIN_CPF}`);
+  }
+  // Criar admin se ainda não existir
+  const existe = await Usuario.findOne({ login: ADMIN_CPF }).lean();
   if (!existe) {
     const hash = await bcrypt.hash('admin123', 10);
-    await Usuario.create({ id: 1, login: 'admin', senha: hash, nome: 'Administrador', perfil: 'admin', cor: '#2563eb' });
-    console.log('✅ Admin criado: login=admin senha=admin123');
+    await Usuario.create({ id: 1, login: ADMIN_CPF, senha: hash, nome: 'Administrador', perfil: 'admin', cor: '#2563eb', cpf: '111.111.111-93' });
+    console.log(`✅ Admin criado: CPF=111.111.111-93  senha=admin123`);
   }
   // Garante que o Counter de usuários nunca colida com admin (id=1)
   await Counter.updateOne(
@@ -395,33 +404,38 @@ async function registrarLog(req, tipo, acao, detalhe = '') {
 // ════════════════════════════════════════════════════════════
 const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, skipSuccessfulRequests: true });
 
+// Remove pontuação de CPF para normalizar o login (ex: 111.111.111-93 → 11111111193)
+function normLogin(s) { return s.replace(/[\.\-\/]/g, '').toLowerCase().trim(); }
+
 app.post('/api/login', loginLimiter, async (req, res) => {
   try {
     const { login, senha } = req.body;
     if (!login || !senha) return res.status(400).json({ erro: 'Login e senha obrigatórios' });
 
-    const bloqueio = await FailedLogin.findById(login.toLowerCase()).lean();
+    const loginNorm = normLogin(login);
+
+    const bloqueio = await FailedLogin.findById(loginNorm).lean();
     if (bloqueio?.bloqueadoAte && new Date() < new Date(bloqueio.bloqueadoAte)) {
       const mins = Math.ceil((new Date(bloqueio.bloqueadoAte) - new Date()) / 60000);
       return res.status(429).json({ erro: `Conta bloqueada. Aguarde ${mins} minuto(s).` });
     }
 
-    const u = await Usuario.findOne({ login: login.toLowerCase() }).lean();
+    const u = await Usuario.findOne({ login: loginNorm }).lean();
     if (!u || !(await bcrypt.compare(senha, u.senha))) {
       await FailedLogin.findByIdAndUpdate(
-        login.toLowerCase(),
+        loginNorm,
         { $inc: { count: 1 }, $set: { bloqueadoAte: null } },
         { upsert: true }
       );
-      const fl = await FailedLogin.findById(login.toLowerCase()).lean();
+      const fl = await FailedLogin.findById(loginNorm).lean();
       if (fl && fl.count >= 5) {
-        await FailedLogin.findByIdAndUpdate(login.toLowerCase(), { bloqueadoAte: new Date(Date.now() + 15 * 60 * 1000) });
+        await FailedLogin.findByIdAndUpdate(loginNorm, { bloqueadoAte: new Date(Date.now() + 15 * 60 * 1000) });
         return res.status(429).json({ erro: 'Muitas tentativas. Conta bloqueada por 15 minutos.' });
       }
-      return res.status(401).json({ erro: 'Usuário ou senha incorretos' });
+      return res.status(401).json({ erro: 'CPF ou senha incorretos' });
     }
 
-    await FailedLogin.deleteOne({ _id: login.toLowerCase() });
+    await FailedLogin.deleteOne({ _id: loginNorm });
     req.session.usuario = { id: u.id, login: u.login, nome: u.nome, perfil: u.perfil, cor: u.cor, matricula: u.matricula || '', cpf: u.cpf || '', setor: u.setor || '' };
     await registrarLog(req, 'auth', 'login', `Login de ${u.login}`);
     res.json({ ok: true, usuario: req.session.usuario });
@@ -830,15 +844,18 @@ app.get('/api/public/setores', async (req, res) => {
 
 app.post('/api/public/solicitar-acesso', async (req, res) => {
   try {
-    const { nome, login, matricula, cpf, setor, justificativa, perfil } = req.body;
-    if (!nome || !login) return res.status(400).json({ erro: 'Nome e matrícula são obrigatórios' });
-    if (!cpf)            return res.status(400).json({ erro: 'CPF é obrigatório' });
-    if (!setor)          return res.status(400).json({ erro: 'Setor é obrigatório' });
-    const loginNorm = login.toLowerCase().trim();
+    const { nome, matricula, cpf, setor, justificativa, perfil } = req.body;
+    if (!nome)      return res.status(400).json({ erro: 'Nome é obrigatório' });
+    if (!cpf)       return res.status(400).json({ erro: 'CPF é obrigatório' });
+    if (!matricula) return res.status(400).json({ erro: 'Matrícula é obrigatória' });
+    if (!setor)     return res.status(400).json({ erro: 'Setor é obrigatório' });
+    // CPF normalizado (só dígitos) é o login do usuário
+    const loginNorm = cpf.replace(/\D/g, '');
+    if (loginNorm.length !== 11) return res.status(400).json({ erro: 'CPF inválido — informe os 11 dígitos' });
     const jaExiste = await Usuario.findOne({ login: loginNorm }).lean();
-    if (jaExiste) return res.status(409).json({ erro: 'Esta matrícula já possui acesso ao sistema' });
+    if (jaExiste) return res.status(409).json({ erro: 'Este CPF já possui acesso ao sistema' });
     const jaSolicitou = await Solicitacao.findOne({ login: loginNorm, status: 'Pendente' }).lean();
-    if (jaSolicitou) return res.status(409).json({ erro: 'Já existe uma solicitação pendente para esta matrícula' });
+    if (jaSolicitou) return res.status(409).json({ erro: 'Já existe uma solicitação pendente para este CPF' });
     const id = await nextId(Solicitacao);
     await Solicitacao.create({
       id, nome: nome.trim(), login: loginNorm,

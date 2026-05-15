@@ -23,8 +23,9 @@
       <div class="login-error" id="login-error"></div>
 
       <div class="field">
-        <label>Usuário</label>
-        <input type="text" id="login-user" placeholder="seu.login" autocomplete="username"
+        <label>CPF</label>
+        <input type="text" id="login-user" placeholder="000.000.000-00" autocomplete="username"
+          maxlength="14" oninput="maskCPF(this)"
           onkeydown="if(event.key==='Enter')document.getElementById('login-pass').focus()">
       </div>
       <div class="field">
@@ -2007,7 +2008,7 @@ async function enviarSolicitacaoAcesso() {
     await fetch('/api/public/solicitar-acesso', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nome, login: matricula, matricula, cpf, setor, perfil: 'servidor' }),
+      body: JSON.stringify({ nome, matricula, cpf, setor, perfil: 'servidor' }),
     }).then(async r => {
       const d = await r.json();
       if (!r.ok) throw new Error(d.erro || 'Erro ao enviar');
