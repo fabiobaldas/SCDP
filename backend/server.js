@@ -252,7 +252,7 @@ function adicionarDias(dataStr, n) {
 const CAMPOS_PCDP = [
   'numero','servidor','matricula','cargo','setor','cpf','destino','pais','internacional',
   'data_saida','data_retorno','num_diarias','motivo','evento','tipo','meio_transporte',
-  'valor_diaria_unit','valor_diarias','valor_passagens','valor_total','status',
+  'valor_diaria_unit','valor_diarias','valor_passagens','valor_total',
   'autorizado_por','data_autorizacao','motivo_rejeicao','prazo_prestacao',
   'observacoes','andamento','criado_por','criado_em','atualizado_em',
 ];
@@ -903,7 +903,7 @@ app.patch('/api/solicitacoes/:id/aprovar', admin, async (req, res) => {
     }
     const cores = ['#2563eb','#7c3aed','#059669','#d97706','#dc2626','#0891b2','#be185d','#65a30d'];
     const total = await Usuario.countDocuments();
-    const senhaHash = await bcrypt.hash('Acesso@2026', 10);
+    const senhaHash = await bcrypt.hash('1234', 10);
     const uid = await nextId(Usuario);
     await Usuario.create({
       id: uid, login: s.login, senha: senhaHash,
@@ -915,7 +915,7 @@ app.patch('/api/solicitacoes/:id/aprovar', admin, async (req, res) => {
     });
     await Solicitacao.updateOne({ id }, { $set: { status: 'Aprovada', resolvido_em: agora(), resolvido_por: req.session.usuario.nome } });
     await registrarLog(req, 'usuario', 'criar', `Solicitação de ${s.login} aprovada → usuário criado (senha padrão)`);
-    res.json({ ok: true, senha_padrao: 'Acesso@2026' });
+    res.json({ ok: true, senha_padrao: '1234' });
   } catch (e) { res.status(500).json({ erro: 'Erro ao aprovar solicitação' }); }
 });
 
