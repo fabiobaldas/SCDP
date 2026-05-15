@@ -737,9 +737,9 @@
                    autocomplete="off" oninput="buscarAeroporto('origem')" onblur="setTimeout(()=>fecharAutoAero('origem'),200)">
             <ul id="aero-origem-lista" class="autocomplete-lista"></ul>
           </div>
-          <div class="form-group" style="position:relative">
-            <label>Aeroporto de Destino <span id="lbl-aero-destino-auto" style="font-size:10px;color:var(--primary);font-weight:500">• preenchido automaticamente para viagens nacionais</span></label>
-            <input type="text" id="pcdp-destino-passagem" class="form-input" placeholder="Digite cidade, nome ou código (ex: BSB, Brasília...)"
+          <div id="bloco-aero-destino-int" class="form-group" style="position:relative;display:none">
+            <label>Aeroporto de Destino</label>
+            <input type="text" id="pcdp-destino-passagem" class="form-input" placeholder="Digite país, cidade ou código (ex: LIS, Portugal...)"
                    autocomplete="off" oninput="buscarAeroporto('destino')" onblur="setTimeout(()=>fecharAutoAero('destino'),200)">
             <ul id="aero-destino-lista" class="autocomplete-lista"></ul>
           </div>
@@ -2536,8 +2536,10 @@ function initPaisIntSelect() {
 }
 
 function _aplicarModoInternacional(isInt) {
-  document.getElementById('bloco-domestico').style.display     = isInt ? 'none' : '';
-  document.getElementById('bloco-internacional').style.display = isInt ? ''     : 'none';
+  document.getElementById('bloco-domestico').style.display          = isInt ? 'none' : '';
+  document.getElementById('bloco-internacional').style.display      = isInt ? ''     : 'none';
+  const blocoDestInt = document.getElementById('bloco-aero-destino-int');
+  if (blocoDestInt) blocoDestInt.style.display = isInt ? '' : 'none';
 }
 
 function setTipoViagem(isInt) {
