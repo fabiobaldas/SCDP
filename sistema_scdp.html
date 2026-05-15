@@ -658,11 +658,13 @@
       <div class="form-row">
         <div class="form-group">
           <label>Data de Saída *</label>
-          <input type="text" id="pcdp-data-saida" class="form-input" placeholder="DD/MM/AAAA" maxlength="10">
+          <input type="text" id="pcdp-data-saida" class="form-input" placeholder="DD/MM/AAAA" maxlength="10"
+                 oninput="maskData(this); calcularDiarias()">
         </div>
         <div class="form-group">
           <label>Data de Retorno *</label>
-          <input type="text" id="pcdp-data-retorno" class="form-input" placeholder="DD/MM/AAAA" maxlength="10">
+          <input type="text" id="pcdp-data-retorno" class="form-input" placeholder="DD/MM/AAAA" maxlength="10"
+                 oninput="maskData(this); calcularDiarias()">
         </div>
       </div>
       <div class="form-row">
@@ -700,7 +702,7 @@
       <div class="form-section">Valores</div>
       <div class="form-row-3" id="campos-diarias">
         <div class="form-group">
-          <label>Nº de Diárias</label>
+          <label>Nº de Diárias <span id="lbl-diarias-auto" style="font-size:10px;color:var(--primary);font-weight:500;display:none">• calculado automaticamente</span></label>
           <input type="number" id="pcdp-num-diarias" class="form-input" min="0" step="0.5" placeholder="0" oninput="calcularTotal()">
         </div>
         <div class="form-group">
@@ -1516,6 +1518,35 @@ function toggleCamposFinanceiros() {
   const tipo = document.getElementById('pcdp-tipo').value;
   document.getElementById('campos-diarias').style.display = tipo !== 'Passagens' ? 'grid' : 'none';
   document.getElementById('campos-passagens').style.display = tipo !== 'Diárias' ? 'flex' : 'none';
+}
+
+function maskData(el) {
+  let v = el.value.replace(/\D/g, '').slice(0, 8);
+  if (v.length > 4) v = v.replace(/(\d{2})(\d{2})(\d{0,4})/, '$1/$2/$3');
+  else if (v.length > 2) v = v.replace(/(\d{2})(\d{0,2})/, '$1/$2');
+  el.value = v;
+}
+
+function parseDateBR(s) {
+  const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!m) return null;
+  const d = new Date(+m[3], +m[2] - 1, +m[1]);
+  // Valida se a data é real (ex: 31/02 não existe)
+  return d.getFullYear() === +m[3] && d.getMonth() === +m[2] - 1 && d.getDate() === +m[1] ? d : null;
+}
+
+function calcularDiarias() {
+  const saida   = parseDateBR(document.getElementById('pcdp-data-saida').value);
+  const retorno = parseDateBR(document.getElementById('pcdp-data-retorno').value);
+  const lbl     = document.getElementById('lbl-diarias-auto');
+  if (saida && retorno && retorno >= saida) {
+    const dias = Math.round((retorno - saida) / 86400000); // ms → dias
+    document.getElementById('pcdp-num-diarias').value = dias || '';
+    if (lbl) lbl.style.display = dias ? 'inline' : 'none';
+    calcularTotal();
+  } else {
+    if (lbl) lbl.style.display = 'none';
+  }
 }
 
 function calcularTotal() {
