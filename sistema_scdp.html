@@ -661,13 +661,13 @@
       <div id="bloco-internacional" class="form-row" style="display:none">
         <div class="form-group" style="flex:0 0 260px">
           <label>País *</label>
-          <select id="pcdp-pais-int" class="form-input" onchange="document.getElementById('pcdp-pais').value=this.options[this.selectedIndex].text">
+          <select id="pcdp-pais-int" class="form-input" onchange="document.getElementById('pcdp-pais').value=this.options[this.selectedIndex].text; preencherRotaPassagem()">
             <option value="">— Selecione o país —</option>
           </select>
         </div>
         <div class="form-group">
           <label>Cidade *</label>
-          <input type="text" id="pcdp-cidade-int" class="form-input" placeholder="Ex: Paris, Buenos Aires, Lisboa...">
+          <input type="text" id="pcdp-cidade-int" class="form-input" placeholder="Ex: Paris, Buenos Aires, Lisboa..." oninput="preencherRotaPassagem()">
         </div>
       </div>
       <div class="form-row">
@@ -2393,11 +2393,7 @@ function initUFSelect() {
 }
 
 function onUFChange() {
-  const cidade = document.getElementById('pcdp-cidade');
-  cidade.value = '';
-  fecharListaCidades();
-  cidade.placeholder = 'Digite para buscar a cidade...';
-  cidade.focus();
+  preencherRotaPassagem();
 }
 
 function filtrarCidades() {
