@@ -90,6 +90,7 @@ const usuarioSchema = new Schema({
   perfil:      { type: String, default: 'visualizador' },
   cor:         String,
   matricula:   String,
+  cpf:         String,
   setor:       String,
 }, { versionKey: false });
 
@@ -421,7 +422,7 @@ app.post('/api/login', loginLimiter, async (req, res) => {
     }
 
     await FailedLogin.deleteOne({ _id: login.toLowerCase() });
-    req.session.usuario = { id: u.id, login: u.login, nome: u.nome, perfil: u.perfil, cor: u.cor };
+    req.session.usuario = { id: u.id, login: u.login, nome: u.nome, perfil: u.perfil, cor: u.cor, matricula: u.matricula || '', cpf: u.cpf || '', setor: u.setor || '' };
     await registrarLog(req, 'auth', 'login', `Login de ${u.login}`);
     res.json({ ok: true, usuario: req.session.usuario });
   } catch (e) {
@@ -873,6 +874,8 @@ app.patch('/api/solicitacoes/:id/aprovar', admin, async (req, res) => {
     await Usuario.create({
       id: uid, login: s.login, senha: senhaHash,
       nome: s.nome, perfil: s.perfil || 'servidor',
+      matricula: s.matricula || s.login,
+      cpf: s.cpf || '',
       setor: s.setor || '', cor: cores[total % cores.length],
     });
     await Solicitacao.updateOne({ id }, { $set: { status: 'Aprovada', resolvido_em: agora(), resolvido_por: req.session.usuario.nome } });

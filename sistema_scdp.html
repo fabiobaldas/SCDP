@@ -1424,6 +1424,13 @@ function abrirModalPcdp(pcdp = null) {
     el.value = pcdp ? (pcdp[mapa[campo] || campo] || '') : '';
   });
 
+  // Pré-preencher dados do servidor logado em nova PCDP
+  if (!pcdp && usuarioAtual) {
+    if (usuarioAtual.nome)      document.getElementById('pcdp-servidor').value  = usuarioAtual.nome;
+    if (usuarioAtual.matricula) document.getElementById('pcdp-matricula').value = usuarioAtual.matricula;
+    if (usuarioAtual.cpf)       document.getElementById('pcdp-cpf').value       = usuarioAtual.cpf;
+  }
+
   document.getElementById('pcdp-data-saida').value = pcdp?.data_saida || '';
   document.getElementById('pcdp-data-retorno').value = pcdp?.data_retorno || '';
   document.getElementById('pcdp-pais').value = pcdp?.pais || 'Brasil';
@@ -1436,9 +1443,10 @@ function abrirModalPcdp(pcdp = null) {
   document.getElementById('pcdp-valor-passagens').value = pcdp?.valor_passagens || '';
   document.getElementById('pcdp-valor-total').value = pcdp?.valor_total || '';
 
-  // Popular setor
+  // Popular setor (edição usa setor do PCDP; nova PCDP usa setor do usuário logado)
+  const setorAtivo = pcdp?.setor || (!pcdp && usuarioAtual?.setor) || '';
   const selectSetor = document.getElementById('pcdp-setor');
-  selectSetor.innerHTML = '<option value="">— Selecione —</option>' + setoresData.map(s => `<option ${pcdp?.setor === s ? 'selected' : ''}>${s}</option>`).join('');
+  selectSetor.innerHTML = '<option value="">— Selecione —</option>' + setoresData.map(s => `<option ${setorAtivo === s ? 'selected' : ''}>${s}</option>`).join('');
 
   toggleCamposFinanceiros();
   abrirModal('modal-pcdp');
