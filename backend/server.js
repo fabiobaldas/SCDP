@@ -1172,55 +1172,122 @@ const TODOS_AEROPORTOS = [
   ...AEROPORTOS_INT,
 ];
 
+// Mapa país (PT) → código ISO2
+const PAIS_ISO = {
+  'africa do sul':'ZA','alemanha':'DE','angola':'AO','arabia saudita':'SA',
+  'argentina':'AR','australia':'AU','austria':'AT','belgica':'BE','bolivia':'BO',
+  'brasil':'BR','canada':'CA','chile':'CL','china':'CN','colombia':'CO',
+  'coreia do sul':'KR','cuba':'CU','dinamarca':'DK','egito':'EG',
+  'emirados arabes unidos':'AE','equador':'EC','espanha':'ES','estados unidos':'US',
+  'eua':'US','etiopia':'ET','filipinas':'PH','finlandia':'FI','franca':'FR',
+  'frana':'FR','gana':'GH','grecia':'GR','guatemala':'GT','holanda':'NL',
+  'honduras':'HN','hungria':'HU','india':'IN','indonesia':'ID','irlanda':'IE',
+  'israel':'IL','italia':'IT','jamaica':'JM','japao':'JP','jordania':'JO',
+  'libano':'LB','malasia':'MY','marrocos':'MA','mexico':'MX',
+  'mocambique':'MZ','nigeria':'NG','noruega':'NO','nova zelandia':'NZ',
+  'panama':'PA','paraguai':'PY','peru':'PE','polonia':'PL','portugal':'PT',
+  'qatar':'QA','reino unido':'GB','republica checa':'CZ',
+  'republica dominicana':'DO','romenia':'RO','russia':'RU','senegal':'SN',
+  'singapura':'SG','suecia':'SE','suica':'CH','tailandia':'TH',
+  'tanzania':'TZ','turquia':'TR','ucrania':'UA','uruguai':'UY',
+  'venezuela':'VE','vietna':'VN','zimbabue':'ZW',
+};
+
+// Cache simples: { iso: { ts, aeroportos[] } }
+const _aeroCache = new Map();
+const CACHE_TTL = 60 * 60 * 1000; // 1 hora
+
+async function buscarAeroportosPorPais(iso, paisNome) {
+  const cached = _aeroCache.get(iso);
+  if (cached && Date.now() - cached.ts < CACHE_TTL) return cached.aeroportos;
+
+  const resp = await fetch(`https://airportsapi.com/api/countries/${iso}/airports`);
+  if (!resp.ok) return [];
+  const data = await resp.json();
+
+  const TIPOS_OK = ['large_airport', 'medium_airport'];
+  const aeroportos = (data.data || [])
+    .filter(a => a.attributes.iata_code && TIPOS_OK.includes(a.attributes.type))
+    .map(a => ({
+      codigo: a.attributes.iata_code,
+      iata: a.attributes.iata_code,
+      icao: a.attributes.icao_code || a.attributes.gps_code,
+      nome: a.attributes.name,
+      cidade: '',
+      pais: paisNome,
+      label: `${a.attributes.iata_code} — ${a.attributes.name} (${paisNome})`,
+    }))
+    .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+
+  _aeroCache.set(iso, { ts: Date.now(), aeroportos });
+  return aeroportos;
+}
+
+function normalizar(s) {
+  return s.toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '') // remove acentos
+    .replace(/[^a-z0-9 ]/g, '').trim();
+}
+
 app.get('/api/aeroportos', auth, async (req, res) => {
-  const q = (req.query.q || '').toLowerCase().trim();
+  const q    = (req.query.q || '').trim();
+  const qNorm = normalizar(q);
   if (!q || q.length < 2) return res.json([]);
 
-  // Busca em todos os aeroportos (BR + internacionais)
+  // 1. Verifica se é nome de país
+  const iso = PAIS_ISO[qNorm];
+  if (iso) {
+    try {
+      const paisNome = q.charAt(0).toUpperCase() + q.slice(1);
+      const aeroportos = await buscarAeroportosPorPais(iso, paisNome);
+      return res.json(aeroportos.slice(0, 15));
+    } catch (_) { /* cai no fallback */ }
+  }
+
+  // 2. Busca na lista local (BR + principais internacionais)
+  const qL = qNorm;
   const resultados = TODOS_AEROPORTOS.filter(a =>
-    a.iata?.toLowerCase().includes(q) ||
-    a.icao?.toLowerCase().includes(q) ||
-    a.nome.toLowerCase().includes(q) ||
-    a.cidade.toLowerCase().includes(q) ||
-    a.pais?.toLowerCase().includes(q) ||
-    (a.uf && a.uf.toLowerCase() === q)
+    normalizar(a.iata || '').includes(qL) ||
+    normalizar(a.icao || '').includes(qL) ||
+    normalizar(a.nome).includes(qL) ||
+    normalizar(a.cidade).includes(qL) ||
+    normalizar(a.pais || '').includes(qL) ||
+    (a.uf && a.uf.toLowerCase() === qL)
   ).slice(0, 10).map(a => {
     const local = a.uf ? `${a.cidade}, ${a.uf}` : `${a.cidade}, ${a.pais}`;
     return {
       codigo: a.iata || a.icao,
-      iata: a.iata,
-      icao: a.icao,
-      nome: a.nome,
+      iata:   a.iata,
+      icao:   a.icao,
+      nome:   a.nome,
       cidade: a.cidade,
-      uf: a.uf || '',
-      pais: a.pais || '',
-      label: `${a.iata || a.icao} — ${a.nome} (${local})`,
+      pais:   a.pais || '',
+      label:  `${a.iata || a.icao} — ${a.nome} (${local})`,
     };
   });
+  if (resultados.length) return res.json(resultados);
 
-  // Se parece um código IATA/ICAO e não achou na lista, tenta API externa
-  if (resultados.length === 0 && /^[A-Za-z]{2,4}$/.test(q.trim())) {
+  // 3. Fallback: código IATA/ICAO exato via API externa
+  if (/^[A-Za-z]{2,4}$/.test(q)) {
     try {
       const code = q.toUpperCase();
       const resp = await fetch(`https://airportsapi.com/api/airports/${code}`);
       if (resp.ok) {
         const data = await resp.json();
         const a = data?.data?.attributes;
-        if (a?.name) {
-          resultados.push({
-            codigo: a.iata_code || a.icao_code || code,
-            iata: a.iata_code,
-            icao: a.icao_code,
-            nome: a.name,
-            cidade: '',
-            label: `${a.iata_code || a.icao_code || code} — ${a.name}`,
-          });
-        }
+        if (a?.name) return res.json([{
+          codigo: a.iata_code || a.icao_code || code,
+          iata:   a.iata_code,
+          icao:   a.icao_code,
+          nome:   a.name,
+          cidade: '',
+          label:  `${a.iata_code || a.icao_code || code} — ${a.name}`,
+        }]);
       }
-    } catch (_) { /* ignora falha de API externa */ }
+    } catch (_) {}
   }
 
-  res.json(resultados);
+  res.json([]);
 });
 
 // ════════════════════════════════════════════════════════════
