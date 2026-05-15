@@ -1097,29 +1097,109 @@ const AEROPORTOS_BR = [
   { iata:'MNX', icao:'SBMY', nome:'Aeroporto de Manicoré', cidade:'Manicoré', uf:'AM' },
 ];
 
+const AEROPORTOS_INT = [
+  // Portugal
+  { iata:'LIS', icao:'LPPT', nome:'Aeroporto Humberto Delgado', cidade:'Lisboa', pais:'Portugal' },
+  { iata:'OPO', icao:'LPPR', nome:'Aeroporto Francisco Sá Carneiro', cidade:'Porto', pais:'Portugal' },
+  { iata:'FAO', icao:'LPFR', nome:'Aeroporto Internacional de Faro', cidade:'Faro', pais:'Portugal' },
+  // Argentina
+  { iata:'EZE', icao:'SAEZ', nome:'Aeroporto Internacional Ministro Pistarini — Ezeiza', cidade:'Buenos Aires', pais:'Argentina' },
+  { iata:'AEP', icao:'SABE', nome:'Aeroporto Jorge Newbery — Aeroparque', cidade:'Buenos Aires', pais:'Argentina' },
+  { iata:'COR', icao:'SACO', nome:'Aeroporto Internacional Ambrosio Taravella', cidade:'Córdoba', pais:'Argentina' },
+  // EUA
+  { iata:'MIA', icao:'KMIA', nome:'Aeroporto Internacional de Miami', cidade:'Miami', pais:'Estados Unidos' },
+  { iata:'JFK', icao:'KJFK', nome:'Aeroporto Internacional John F. Kennedy', cidade:'Nova York', pais:'Estados Unidos' },
+  { iata:'GRU', icao:'KGRU', nome:'Aeroporto Internacional de Guarulhos', cidade:'São Paulo', pais:'Brasil' },
+  { iata:'LAX', icao:'KLAX', nome:'Aeroporto Internacional de Los Angeles', cidade:'Los Angeles', pais:'Estados Unidos' },
+  { iata:'ORD', icao:'KORD', nome:'Aeroporto Internacional O\'Hare', cidade:'Chicago', pais:'Estados Unidos' },
+  { iata:'IAD', icao:'KIAD', nome:'Aeroporto Internacional Washington Dulles', cidade:'Washington', pais:'Estados Unidos' },
+  // França
+  { iata:'CDG', icao:'LFPG', nome:'Aeroporto Internacional Charles de Gaulle', cidade:'Paris', pais:'França' },
+  { iata:'ORY', icao:'LFPO', nome:'Aeroporto de Orly', cidade:'Paris', pais:'França' },
+  // Espanha
+  { iata:'MAD', icao:'LEMD', nome:'Aeroporto Internacional Adolfo Suárez Madrid-Barajas', cidade:'Madrid', pais:'Espanha' },
+  { iata:'BCN', icao:'LEBL', nome:'Aeroporto Internacional El Prat', cidade:'Barcelona', pais:'Espanha' },
+  // Itália
+  { iata:'FCO', icao:'LIRF', nome:'Aeroporto Internacional Leonardo da Vinci — Fiumicino', cidade:'Roma', pais:'Itália' },
+  { iata:'MXP', icao:'LIMC', nome:'Aeroporto Internacional de Milão Malpensa', cidade:'Milão', pais:'Itália' },
+  // Alemanha
+  { iata:'FRA', icao:'EDDF', nome:'Aeroporto Internacional de Frankfurt', cidade:'Frankfurt', pais:'Alemanha' },
+  { iata:'MUC', icao:'EDDM', nome:'Aeroporto Internacional Franz Josef Strauss', cidade:'Munique', pais:'Alemanha' },
+  // Reino Unido
+  { iata:'LHR', icao:'EGLL', nome:'Aeroporto Internacional de Heathrow', cidade:'Londres', pais:'Reino Unido' },
+  { iata:'LGW', icao:'EGKK', nome:'Aeroporto de Gatwick', cidade:'Londres', pais:'Reino Unido' },
+  // Holanda
+  { iata:'AMS', icao:'EHAM', nome:'Aeroporto Internacional de Amsterdã Schiphol', cidade:'Amsterdã', pais:'Holanda' },
+  // Suíça
+  { iata:'ZRH', icao:'LSZH', nome:'Aeroporto Internacional de Zurique', cidade:'Zurique', pais:'Suíça' },
+  // Bélgica
+  { iata:'BRU', icao:'EBBR', nome:'Aeroporto Internacional de Bruxelas', cidade:'Bruxelas', pais:'Bélgica' },
+  // Japão
+  { iata:'NRT', icao:'RJAA', nome:'Aeroporto Internacional Narita', cidade:'Tóquio', pais:'Japão' },
+  { iata:'HND', icao:'RJTT', nome:'Aeroporto Internacional Haneda', cidade:'Tóquio', pais:'Japão' },
+  // China
+  { iata:'PEK', icao:'ZBAA', nome:'Aeroporto Internacional de Pequim — Capital', cidade:'Pequim', pais:'China' },
+  { iata:'PVG', icao:'ZSPD', nome:'Aeroporto Internacional de Xangai Pudong', cidade:'Xangai', pais:'China' },
+  // Emirados
+  { iata:'DXB', icao:'OMDB', nome:'Aeroporto Internacional de Dubai', cidade:'Dubai', pais:'Emirados Árabes Unidos' },
+  // México
+  { iata:'MEX', icao:'MMMX', nome:'Aeroporto Internacional Benito Juárez', cidade:'Cidade do México', pais:'México' },
+  // Chile
+  { iata:'SCL', icao:'SCEL', nome:'Aeroporto Internacional Comodoro Arturo Merino Benítez', cidade:'Santiago', pais:'Chile' },
+  // Colômbia
+  { iata:'BOG', icao:'SKBO', nome:'Aeroporto Internacional El Dorado', cidade:'Bogotá', pais:'Colômbia' },
+  // Peru
+  { iata:'LIM', icao:'SPJC', nome:'Aeroporto Internacional Jorge Chávez', cidade:'Lima', pais:'Peru' },
+  // Uruguai
+  { iata:'MVD', icao:'SUMU', nome:'Aeroporto Internacional de Carrasco', cidade:'Montevidéu', pais:'Uruguai' },
+  // Paraguai
+  { iata:'ASU', icao:'SGAS', nome:'Aeroporto Internacional Silvio Pettirossi', cidade:'Assunção', pais:'Paraguai' },
+  // Bolívia
+  { iata:'VVI', icao:'SLVR', nome:'Aeroporto Internacional Viru Viru', cidade:'Santa Cruz de la Sierra', pais:'Bolívia' },
+  // Canadá
+  { iata:'YYZ', icao:'CYYZ', nome:'Aeroporto Internacional Pearson', cidade:'Toronto', pais:'Canadá' },
+  { iata:'YUL', icao:'CYUL', nome:'Aeroporto Internacional Pierre Elliott Trudeau', cidade:'Montreal', pais:'Canadá' },
+  // Africa do Sul
+  { iata:'JNB', icao:'FAOR', nome:'Aeroporto Internacional O.R. Tambo', cidade:'Joanesburgo', pais:'África do Sul' },
+  // Angola
+  { iata:'LAD', icao:'FNLU', nome:'Aeroporto Internacional Quatro de Fevereiro', cidade:'Luanda', pais:'Angola' },
+  // Moçambique
+  { iata:'MPM', icao:'FQMA', nome:'Aeroporto Internacional de Maputo', cidade:'Maputo', pais:'Moçambique' },
+];
+
+const TODOS_AEROPORTOS = [
+  ...AEROPORTOS_BR.map(a => ({ ...a, pais: 'Brasil' })),
+  ...AEROPORTOS_INT,
+];
+
 app.get('/api/aeroportos', auth, async (req, res) => {
   const q = (req.query.q || '').toLowerCase().trim();
   if (!q || q.length < 2) return res.json([]);
 
-  // Busca local nos aeroportos brasileiros
-  const locais = AEROPORTOS_BR.filter(a =>
+  // Busca em todos os aeroportos (BR + internacionais)
+  const resultados = TODOS_AEROPORTOS.filter(a =>
     a.iata?.toLowerCase().includes(q) ||
     a.icao?.toLowerCase().includes(q) ||
     a.nome.toLowerCase().includes(q) ||
     a.cidade.toLowerCase().includes(q) ||
-    a.uf?.toLowerCase() === q
-  ).slice(0, 8).map(a => ({
-    codigo: a.iata || a.icao,
-    iata: a.iata,
-    icao: a.icao,
-    nome: a.nome,
-    cidade: a.cidade,
-    uf: a.uf,
-    label: `${a.iata || a.icao} — ${a.nome} (${a.cidade}${a.uf ? ', '+a.uf : ''})`,
-  }));
+    a.pais?.toLowerCase().includes(q) ||
+    (a.uf && a.uf.toLowerCase() === q)
+  ).slice(0, 10).map(a => {
+    const local = a.uf ? `${a.cidade}, ${a.uf}` : `${a.cidade}, ${a.pais}`;
+    return {
+      codigo: a.iata || a.icao,
+      iata: a.iata,
+      icao: a.icao,
+      nome: a.nome,
+      cidade: a.cidade,
+      uf: a.uf || '',
+      pais: a.pais || '',
+      label: `${a.iata || a.icao} — ${a.nome} (${local})`,
+    };
+  });
 
-  // Se parece um código IATA/ICAO e não achou localmente, tenta API externa
-  if (locais.length === 0 && /^[A-Za-z]{2,4}$/.test(q.trim())) {
+  // Se parece um código IATA/ICAO e não achou na lista, tenta API externa
+  if (resultados.length === 0 && /^[A-Za-z]{2,4}$/.test(q.trim())) {
     try {
       const code = q.toUpperCase();
       const resp = await fetch(`https://airportsapi.com/api/airports/${code}`);
@@ -1127,13 +1207,12 @@ app.get('/api/aeroportos', auth, async (req, res) => {
         const data = await resp.json();
         const a = data?.data?.attributes;
         if (a?.name) {
-          locais.push({
+          resultados.push({
             codigo: a.iata_code || a.icao_code || code,
             iata: a.iata_code,
             icao: a.icao_code,
             nome: a.name,
             cidade: '',
-            uf: '',
             label: `${a.iata_code || a.icao_code || code} — ${a.name}`,
           });
         }
@@ -1141,7 +1220,7 @@ app.get('/api/aeroportos', auth, async (req, res) => {
     } catch (_) { /* ignora falha de API externa */ }
   }
 
-  res.json(locais);
+  res.json(resultados);
 });
 
 // ════════════════════════════════════════════════════════════
