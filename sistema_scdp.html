@@ -638,11 +638,19 @@
 
       <div class="form-section">Dados da Viagem</div>
       <div class="form-row">
-        <div class="form-group">
-          <label>Destino *</label>
-          <input type="text" id="pcdp-destino" class="form-input" placeholder="Cidade — UF">
+        <div class="form-group" style="flex:0 0 190px">
+          <label>UF *</label>
+          <select id="pcdp-uf" class="form-input" onchange="onUFChange()">
+            <option value="">— Estado —</option>
+          </select>
         </div>
-        <div class="form-group">
+        <div class="form-group" style="position:relative">
+          <label>Cidade / Destino *</label>
+          <input type="text" id="pcdp-cidade" class="form-input" placeholder="Selecione o UF e digite a cidade..." autocomplete="off"
+                 oninput="filtrarCidades()" onfocus="filtrarCidades()" onblur="setTimeout(()=>fecharListaCidades(),180)">
+          <ul id="pcdp-cidade-lista" class="autocomplete-lista"></ul>
+        </div>
+        <div class="form-group" style="flex:0 0 130px">
           <label>País</label>
           <input type="text" id="pcdp-pais" class="form-input" value="Brasil">
         </div>
@@ -1447,12 +1455,32 @@ function abrirModalPcdp(pcdp = null) {
   pcdpCorrente = pcdp;
   document.getElementById('modal-pcdp-titulo').textContent = pcdp ? `Editar PCDP — ${pcdp.numero}` : 'Nova PCDP';
 
-  ['pcdp-servidor','pcdp-matricula','pcdp-cargo','pcdp-cpf','pcdp-destino','pcdp-motivo','pcdp-evento','pcdp-obs','pcdp-andamento'].forEach(id => {
+  ['pcdp-servidor','pcdp-matricula','pcdp-cargo','pcdp-cpf','pcdp-motivo','pcdp-evento','pcdp-obs','pcdp-andamento'].forEach(id => {
     const el = document.getElementById(id);
     const campo = id.replace('pcdp-', '').replace(/-([a-z])/g, (_, l) => l.toUpperCase());
     const mapa = { 'dataSaida': 'data_saida', 'dataRetorno': 'data_retorno', 'numDiarias': 'num_diarias', 'valorDiaria': 'valor_diaria_unit', 'valorDiarias': 'valor_diarias', 'valorPassagens': 'valor_passagens', 'valorTotal': 'valor_total' };
     el.value = pcdp ? (pcdp[mapa[campo] || campo] || '') : '';
   });
+
+  // UF e Cidade
+  initUFSelect();
+  const ufSel = document.getElementById('pcdp-uf');
+  const cidadeInput = document.getElementById('pcdp-cidade');
+  fecharListaCidades();
+  if (pcdp?.uf) {
+    ufSel.value = pcdp.uf;
+    // Cidade vem do campo destino (salvo como "Cidade — UF" ou só "Cidade")
+    const cidadeSalva = pcdp.destino ? pcdp.destino.replace(/\s*—\s*[A-Z]{2}$/, '') : '';
+    cidadeInput.value = cidadeSalva;
+  } else if (pcdp?.destino) {
+    // PCDP antiga sem campo uf — tenta extrair UF do destino "Cidade — UF"
+    const match = pcdp.destino.match(/^(.*?)\s*—\s*([A-Z]{2})$/);
+    if (match) { ufSel.value = match[2]; cidadeInput.value = match[1].trim(); }
+    else cidadeInput.value = pcdp.destino;
+  } else {
+    ufSel.value = '';
+    cidadeInput.value = '';
+  }
 
   // Pré-preencher dados do servidor logado em nova PCDP
   if (!pcdp && usuarioAtual) {
@@ -1501,13 +1529,16 @@ function calcularTotal() {
 
 async function salvarPcdp() {
   const servidor = document.getElementById('pcdp-servidor').value.trim();
-  const setor = document.getElementById('pcdp-setor').value;
-  const destino = document.getElementById('pcdp-destino').value.trim();
+  const setor    = document.getElementById('pcdp-setor').value;
+  const uf       = document.getElementById('pcdp-uf').value;
+  const cidade   = document.getElementById('pcdp-cidade').value.trim();
+  const destino  = cidade && uf ? `${cidade} — ${uf}` : (cidade || uf || '');
   if (!servidor) return toast('Preencha o nome do servidor');
-  if (!destino) return toast('Preencha o destino');
+  if (!uf)       return toast('Selecione o estado (UF)');
+  if (!cidade)   return toast('Preencha a cidade de destino');
 
   const dados = {
-    servidor, setor, destino,
+    servidor, setor, destino, uf,
     matricula: document.getElementById('pcdp-matricula').value.trim(),
     cargo: document.getElementById('pcdp-cargo').value.trim(),
     cpf: document.getElementById('pcdp-cpf').value.trim(),
@@ -2232,6 +2263,64 @@ function preencherSelectSetor(id, comOpcaoTodos = false) {
     setoresData.map(s => `<option ${atual === s ? 'selected' : ''}>${s}</option>`).join('');
 }
 
+// ── LOCALIDADES (estados & cidades BR) ─────────────────────
+let BR_LOCALIDADES = { estados: {}, cidades: {} };
+
+async function carregarLocalidades() {
+  try {
+    BR_LOCALIDADES = await fetch('/br_localidades.json').then(r => r.json());
+  } catch (e) { console.warn('Erro ao carregar localidades:', e); }
+}
+
+function initUFSelect() {
+  const sel = document.getElementById('pcdp-uf');
+  if (!sel) return;
+  const atual = sel.value;
+  sel.innerHTML = '<option value="">— Selecione o estado —</option>' +
+    Object.entries(BR_LOCALIDADES.estados)
+      .sort((a, b) => a[1].localeCompare(b[1], 'pt-BR'))
+      .map(([id, nome]) => `<option value="${id}" ${id === atual ? 'selected' : ''}>${id} — ${nome}</option>`)
+      .join('');
+  if (atual) sel.value = atual;
+}
+
+function onUFChange() {
+  const cidade = document.getElementById('pcdp-cidade');
+  cidade.value = '';
+  fecharListaCidades();
+  cidade.placeholder = 'Digite para buscar a cidade...';
+  cidade.focus();
+}
+
+function filtrarCidades() {
+  const uf = document.getElementById('pcdp-uf').value;
+  const q  = document.getElementById('pcdp-cidade').value.trim().toLowerCase();
+  const lista = document.getElementById('pcdp-cidade-lista');
+  if (!uf) { lista.style.display = 'none'; return; }
+  const todas = BR_LOCALIDADES.cidades[uf] || [];
+  const filtradas = q
+    ? todas.filter(c => c.toLowerCase().includes(q))
+    : todas;
+  if (!filtradas.length) { lista.style.display = 'none'; return; }
+  lista.innerHTML = filtradas.slice(0, 100).map(c => {
+    const marcada = q
+      ? c.replace(new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi'), '<mark>$1</mark>')
+      : c;
+    return `<li onmousedown="selecionarCidade(this)" data-cidade="${c}">${marcada}</li>`;
+  }).join('');
+  lista.style.display = 'block';
+}
+
+function selecionarCidade(el) {
+  document.getElementById('pcdp-cidade').value = el.dataset.cidade;
+  fecharListaCidades();
+}
+
+function fecharListaCidades() {
+  const lista = document.getElementById('pcdp-cidade-lista');
+  if (lista) lista.style.display = 'none';
+}
+
 // ── LOGS ────────────────────────────────────────────────────
 async function carregarLogs() {
   try {
@@ -2266,7 +2355,8 @@ function renderLogs() {
 
 // ── INIT ───────────────────────────────────────────────────
 (async () => {
-  // Carrega setores antes de tudo
+  // Carrega localidades e setores antes de tudo (localidades são públicas)
+  await carregarLocalidades();
   try { setoresData = await api('GET', '/api/setores'); } catch (e) { /* silencioso no login */ }
   verificarSessao();
 })();

@@ -1061,3 +1061,36 @@ tbody td { padding: 10px 14px; vertical-align: middle; }
   .kpi-value { font-size: 19px; }
   .kpi-label { font-size: 9px; }
 }
+
+
+/* ── AUTOCOMPLETE CIDADES ── */
+.autocomplete-lista {
+  display: none;
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0; right: 0;
+  background: #fff;
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  max-height: 230px;
+  overflow-y: auto;
+  z-index: 9999;
+  margin: 0;
+  padding: 4px 0;
+  list-style: none;
+  box-shadow: 0 6px 20px rgba(0,0,0,.13);
+}
+.autocomplete-lista li {
+  padding: 8px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--azul-borda);
+  color: var(--texto);
+}
+.autocomplete-lista li:last-child { border-bottom: none; }
+.autocomplete-lista li:hover { background: var(--azul-claro); }
+.autocomplete-lista li mark {
+  background: none;
+  color: var(--primary);
+  font-weight: 600;
+}

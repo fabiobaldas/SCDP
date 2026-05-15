@@ -104,6 +104,7 @@ const pcdpSchema = new Schema({
   setor:            String,
   cpf:              String,
   destino:          String,
+  uf:               String,
   pais:             { type: String, default: 'Brasil' },
   internacional:    { type: Boolean, default: false },
   data_saida:       String,
@@ -250,7 +251,7 @@ function adicionarDias(dataStr, n) {
 
 // Campos permitidos — previne NoSQL injection
 const CAMPOS_PCDP = [
-  'numero','servidor','matricula','cargo','setor','cpf','destino','pais','internacional',
+  'numero','servidor','matricula','cargo','setor','cpf','destino','uf','pais','internacional',
   'data_saida','data_retorno','num_diarias','motivo','evento','tipo','meio_transporte',
   'valor_diaria_unit','valor_diarias','valor_passagens','valor_total',
   'autorizado_por','data_autorizacao','motivo_rejeicao','prazo_prestacao',
