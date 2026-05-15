@@ -734,14 +734,26 @@
           <input type="number" id="pcdp-valor-diarias" class="form-input" min="0" step="0.01" placeholder="0,00" readonly style="background:var(--cinza)">
         </div>
       </div>
-      <div class="form-row" id="campos-passagens">
-        <div class="form-group">
-          <label>Valor Passagens (R$)</label>
-          <input type="number" id="pcdp-valor-passagens" class="form-input" min="0" step="0.01" placeholder="0,00" oninput="calcularTotal()">
+      <div id="campos-passagens" style="display:none">
+        <div class="form-row" style="margin-bottom:0">
+          <div class="form-group">
+            <label>Origem da Passagem</label>
+            <input type="text" id="pcdp-origem-passagem" class="form-input" placeholder="Ex: Rio de Janeiro — RJ">
+          </div>
+          <div class="form-group">
+            <label>Destino da Passagem <span style="font-size:10px;color:var(--primary);font-weight:500">• preenchido automaticamente</span></label>
+            <input type="text" id="pcdp-destino-passagem" class="form-input" placeholder="Preenchido pelo destino da viagem">
+          </div>
         </div>
-        <div class="form-group">
-          <label>Valor Total (R$)</label>
-          <input type="number" id="pcdp-valor-total" class="form-input" min="0" step="0.01" placeholder="0,00" readonly style="background:var(--cinza)">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Valor Passagens (R$)</label>
+            <input type="number" id="pcdp-valor-passagens" class="form-input" min="0" step="0.01" placeholder="0,00" oninput="calcularTotal()">
+          </div>
+          <div class="form-group">
+            <label>Valor Total (R$)</label>
+            <input type="number" id="pcdp-valor-total" class="form-input" min="0" step="0.01" placeholder="0,00" readonly style="background:var(--cinza)">
+          </div>
         </div>
       </div>
 
@@ -1534,6 +1546,8 @@ function abrirModalPcdp(pcdp = null) {
   document.getElementById('pcdp-valor-diarias').value = pcdp?.valor_diarias || '';
   document.getElementById('pcdp-valor-passagens').value = pcdp?.valor_passagens || '';
   document.getElementById('pcdp-valor-total').value = pcdp?.valor_total || '';
+  document.getElementById('pcdp-origem-passagem').value = pcdp?.origem_passagem || '';
+  document.getElementById('pcdp-destino-passagem').value = pcdp?.destino_passagem || '';
 
   // Popular setor (edição usa setor do PCDP; nova PCDP usa setor do usuário logado)
   const setorAtivo = pcdp?.setor || (!pcdp && usuarioAtual?.setor) || '';
@@ -1545,9 +1559,30 @@ function abrirModalPcdp(pcdp = null) {
 }
 
 function toggleCamposFinanceiros() {
-  const tipo = document.getElementById('pcdp-tipo').value;
-  document.getElementById('campos-diarias').style.display = tipo !== 'Passagens' ? 'grid' : 'none';
-  document.getElementById('campos-passagens').style.display = tipo !== 'Diárias' ? 'flex' : 'none';
+  const tipo      = document.getElementById('pcdp-tipo').value;
+  const temDiaria = tipo !== 'Passagens';
+  const temPassag = tipo !== 'Diárias';
+  document.getElementById('campos-diarias').style.display   = temDiaria ? 'grid' : 'none';
+  document.getElementById('campos-passagens').style.display = temPassag ? 'block' : 'none';
+  if (temPassag) preencherRotaPassagem();
+}
+
+function preencherRotaPassagem() {
+  const origem = document.getElementById('pcdp-origem-passagem');
+  const dest   = document.getElementById('pcdp-destino-passagem');
+  // Origem: só preenche se estiver vazio (não sobrescreve edição manual)
+  if (!origem.value) origem.value = 'Rio de Janeiro — RJ';
+  // Destino: auto-preenche sempre a partir do destino principal
+  const isInt = document.getElementById('pcdp-internacional').checked;
+  if (isInt) {
+    const cidade = document.getElementById('pcdp-cidade-int').value.trim();
+    const paisSel = document.getElementById('pcdp-pais-int');
+    const pais  = paisSel.options[paisSel.selectedIndex]?.text || '';
+    if (cidade || pais) dest.value = [cidade, pais].filter(Boolean).join(' — ');
+  } else {
+    const uf = document.getElementById('pcdp-uf').value;
+    if (uf) dest.value = `${BR_LOCALIDADES.estados[uf] || uf} — ${uf}`;
+  }
 }
 
 function maskData(el) {
@@ -1630,6 +1665,8 @@ async function salvarPcdp() {
     valor_diarias: parseFloat(document.getElementById('pcdp-valor-diarias').value) || 0,
     valor_passagens: parseFloat(document.getElementById('pcdp-valor-passagens').value) || 0,
     valor_total: parseFloat(document.getElementById('pcdp-valor-total').value) || 0,
+    origem_passagem: document.getElementById('pcdp-origem-passagem').value.trim(),
+    destino_passagem: document.getElementById('pcdp-destino-passagem').value.trim(),
     status: document.getElementById('pcdp-status').value,
     observacoes: document.getElementById('pcdp-obs').value.trim(),
     andamento: document.getElementById('pcdp-andamento').value.trim(),

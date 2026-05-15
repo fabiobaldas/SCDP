@@ -118,6 +118,8 @@ const pcdpSchema = new Schema({
   valor_diarias:    Number,
   valor_passagens:  Number,
   valor_total:      Number,
+  origem_passagem:  String,
+  destino_passagem: String,
   status:           { type: String, default: 'Rascunho' },
   autorizado_por:   String,
   data_autorizacao: String,
@@ -254,6 +256,7 @@ const CAMPOS_PCDP = [
   'numero','servidor','matricula','cargo','setor','cpf','destino','uf','pais','internacional',
   'data_saida','data_retorno','num_diarias','motivo','evento','tipo','meio_transporte',
   'valor_diaria_unit','valor_diarias','valor_passagens','valor_total',
+  'origem_passagem','destino_passagem',
   'autorizado_por','data_autorizacao','motivo_rejeicao','prazo_prestacao',
   'observacoes','andamento','criado_por','criado_em','atualizado_em',
 ];
