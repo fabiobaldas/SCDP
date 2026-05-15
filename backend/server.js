@@ -181,6 +181,8 @@ const solicitacaoSchema = new Schema({
   id:           { type: Number, index: true },
   nome:         String,
   login:        String,
+  matricula:    String,
+  cpf:          String,
   setor:        String,
   justificativa:String,
   perfil:       { type: String, default: 'servidor' },
@@ -822,17 +824,21 @@ app.get('/api/prazos', auth, async (req, res) => {
 // ════════════════════════════════════════════════════════════
 app.post('/api/public/solicitar-acesso', async (req, res) => {
   try {
-    const { nome, login, setor, justificativa, perfil } = req.body;
-    if (!nome || !login) return res.status(400).json({ erro: 'Nome e login são obrigatórios' });
+    const { nome, login, matricula, cpf, setor, justificativa, perfil } = req.body;
+    if (!nome || !login) return res.status(400).json({ erro: 'Nome e matrícula são obrigatórios' });
+    if (!cpf)            return res.status(400).json({ erro: 'CPF é obrigatório' });
+    if (!setor)          return res.status(400).json({ erro: 'Setor é obrigatório' });
     const loginNorm = login.toLowerCase().trim();
     const jaExiste = await Usuario.findOne({ login: loginNorm }).lean();
-    if (jaExiste) return res.status(409).json({ erro: 'Este login já está em uso no sistema' });
+    if (jaExiste) return res.status(409).json({ erro: 'Esta matrícula já possui acesso ao sistema' });
     const jaSolicitou = await Solicitacao.findOne({ login: loginNorm, status: 'Pendente' }).lean();
-    if (jaSolicitou) return res.status(409).json({ erro: 'Já existe uma solicitação pendente para este login' });
+    if (jaSolicitou) return res.status(409).json({ erro: 'Já existe uma solicitação pendente para esta matrícula' });
     const id = await nextId(Solicitacao);
     await Solicitacao.create({
       id, nome: nome.trim(), login: loginNorm,
-      setor: setor?.trim() || '',
+      matricula: (matricula || login).trim(),
+      cpf: cpf.trim(),
+      setor: setor.trim(),
       justificativa: justificativa?.trim() || '',
       perfil: perfil || 'servidor',
       status: 'Pendente',

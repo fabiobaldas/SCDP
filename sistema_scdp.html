@@ -387,11 +387,10 @@
           <div class="table-wrap">
             <table>
               <thead><tr>
-                <th>Nome</th>
-                <th>Login</th>
-                <th>Perfil</th>
+                <th>Nome do Servidor</th>
+                <th>Matrícula</th>
+                <th>CPF</th>
                 <th>Setor</th>
-                <th>Justificativa</th>
                 <th>Data</th>
                 <th>Status</th>
                 <th>Ações</th>
@@ -502,34 +501,25 @@
     </div>
     <div class="modal-body" id="sol-form-body">
       <p style="font-size:13px;color:var(--texto-sec);margin-bottom:20px;line-height:1.5">
-        Preencha o formulário abaixo. Após o envio, o administrador irá revisar sua solicitação e criar seu acesso.
+        Preencha seus dados abaixo. O administrador irá revisar e liberar seu acesso.
       </p>
       <div class="form-group" style="margin-bottom:14px">
-        <label style="font-size:11px;font-weight:600;color:var(--texto-sec);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">Nome Completo *</label>
-        <input type="text" id="sol-nome" class="form-input" placeholder="Seu nome completo">
+        <label style="font-size:11px;font-weight:600;color:var(--texto-sec);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">Nome do Servidor *</label>
+        <input type="text" id="sol-nome" class="form-input" placeholder="Nome completo do servidor">
       </div>
       <div class="form-row" style="margin-bottom:14px">
         <div class="form-group">
-          <label style="font-size:11px;font-weight:600;color:var(--texto-sec);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">Login desejado *</label>
-          <input type="text" id="sol-login" class="form-input" placeholder="ex: joao.silva">
+          <label style="font-size:11px;font-weight:600;color:var(--texto-sec);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">Matrícula *</label>
+          <input type="text" id="sol-matricula" class="form-input" placeholder="Nº de matrícula">
         </div>
         <div class="form-group">
-          <label style="font-size:11px;font-weight:600;color:var(--texto-sec);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">Perfil solicitado</label>
-          <select id="sol-perfil" class="form-input">
-            <option value="servidor">Servidor</option>
-            <option value="secretaria">Secretaria</option>
-            <option value="autorizador">Autorizador</option>
-            <option value="visualizador">Visualizador</option>
-          </select>
+          <label style="font-size:11px;font-weight:600;color:var(--texto-sec);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">CPF *</label>
+          <input type="text" id="sol-cpf" class="form-input" placeholder="000.000.000-00" maxlength="14" oninput="maskCPF(this)">
         </div>
       </div>
-      <div class="form-group" style="margin-bottom:14px">
-        <label style="font-size:11px;font-weight:600;color:var(--texto-sec);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">Setor</label>
-        <input type="text" id="sol-setor" class="form-input" placeholder="Secretaria / Departamento">
-      </div>
       <div class="form-group" style="margin-bottom:4px">
-        <label style="font-size:11px;font-weight:600;color:var(--texto-sec);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">Justificativa</label>
-        <input type="text" id="sol-justificativa" class="form-input" placeholder="Motivo da solicitação (opcional)">
+        <label style="font-size:11px;font-weight:600;color:var(--texto-sec);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">Setor / Secretaria *</label>
+        <input type="text" id="sol-setor" class="form-input" placeholder="Ex: Secretaria de Obras">
       </div>
       <div id="sol-error" style="display:none;color:var(--vermelho);font-size:12px;margin-top:12px;padding:8px 12px;background:var(--vermelho-claro);border-radius:6px"></div>
     </div>
@@ -1954,9 +1944,16 @@ async function salvarSenha() {
 }
 
 // ── SOLICITAR ACESSO (modal público) ───────────────────────
+function maskCPF(el) {
+  let v = el.value.replace(/\D/g, '').slice(0, 11);
+  if (v.length > 9) v = v.replace(/(\d{3})(\d{3})(\d{3})(\d{0,2})/, '$1.$2.$3-$4');
+  else if (v.length > 6) v = v.replace(/(\d{3})(\d{3})(\d{0,3})/, '$1.$2.$3');
+  else if (v.length > 3) v = v.replace(/(\d{3})(\d{0,3})/, '$1.$2');
+  el.value = v;
+}
+
 function abrirModalSolicitarAcesso() {
-  ['sol-nome','sol-login','sol-setor','sol-justificativa'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('sol-perfil').value = 'servidor';
+  ['sol-nome','sol-matricula','sol-cpf','sol-setor'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('sol-error').style.display = 'none';
   document.getElementById('sol-form-body').style.display = '';
   document.getElementById('sol-sucesso').style.display = 'none';
@@ -1965,20 +1962,21 @@ function abrirModalSolicitarAcesso() {
 }
 
 async function enviarSolicitacaoAcesso() {
-  const nome         = document.getElementById('sol-nome').value.trim();
-  const login        = document.getElementById('sol-login').value.trim();
-  const setor        = document.getElementById('sol-setor').value.trim();
-  const justificativa= document.getElementById('sol-justificativa').value.trim();
-  const perfil       = document.getElementById('sol-perfil').value;
-  const errEl        = document.getElementById('sol-error');
+  const nome      = document.getElementById('sol-nome').value.trim();
+  const matricula = document.getElementById('sol-matricula').value.trim();
+  const cpf       = document.getElementById('sol-cpf').value.trim();
+  const setor     = document.getElementById('sol-setor').value.trim();
+  const errEl     = document.getElementById('sol-error');
   errEl.style.display = 'none';
-  if (!nome) { errEl.textContent = 'Informe o nome completo.'; errEl.style.display = 'block'; return; }
-  if (!login){ errEl.textContent = 'Informe o login desejado.'; errEl.style.display = 'block'; return; }
+  if (!nome)      { errEl.textContent = 'Informe o nome do servidor.'; errEl.style.display = 'block'; return; }
+  if (!matricula) { errEl.textContent = 'Informe a matrícula.';        errEl.style.display = 'block'; return; }
+  if (!cpf)       { errEl.textContent = 'Informe o CPF.';              errEl.style.display = 'block'; return; }
+  if (!setor)     { errEl.textContent = 'Informe o setor.';            errEl.style.display = 'block'; return; }
   try {
     await fetch('/api/public/solicitar-acesso', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nome, login, setor, justificativa, perfil }),
+      body: JSON.stringify({ nome, login: matricula, matricula, cpf, setor, perfil: 'servidor' }),
     }).then(async r => {
       const d = await r.json();
       if (!r.ok) throw new Error(d.erro || 'Erro ao enviar');
@@ -1999,6 +1997,7 @@ let solicitacaoCorrenteId = null;
 async function carregarSolicitacoes() {
   try {
     const lista = await api('GET', '/api/solicitacoes');
+    solicitacoesData = lista;
     const pendentes = lista.filter(s => s.status === 'Pendente').length;
     document.getElementById('sol-count').textContent = `${lista.length} solicitação(ões)`;
     // badge na sidebar
@@ -2010,24 +2009,32 @@ async function carregarSolicitacoes() {
     document.getElementById('tbody-solicitacoes').innerHTML = lista.map(s => `
       <tr>
         <td><strong>${s.nome}</strong></td>
-        <td class="td-mono">${s.login}</td>
-        <td>${s.perfil}</td>
+        <td class="td-mono">${s.matricula || s.login}</td>
+        <td class="td-mono">${s.cpf || '—'}</td>
         <td>${s.setor || '—'}</td>
-        <td class="td-trunc" style="max-width:180px">${s.justificativa || '—'}</td>
         <td class="td-mono" style="font-size:12px">${s.criado_em?.slice(0,10) || '—'}</td>
         <td><span class="badge ${BADGE[s.status] || ''}">${s.status}</span></td>
         <td>
-          ${s.status === 'Pendente' ? `<button class="btn-primary" style="font-size:12px;padding:4px 12px" onclick="abrirAprovarSolicitacao(${s.id},'${s.nome}','${s.login}','${s.perfil}','${s.setor||''}')">Revisar</button>` : `<span style="font-size:12px;color:var(--texto-ter)">${s.resolvido_por || '—'}</span>`}
+          ${s.status === 'Pendente'
+            ? `<button class="btn-primary" style="font-size:12px;padding:4px 12px" onclick="abrirAprovarSolicitacao(${s.id})">Revisar</button>`
+            : `<span style="font-size:12px;color:var(--texto-ter)">${s.resolvido_por || '—'}</span>`}
         </td>
       </tr>
     `).join('');
   } catch (e) { toast('Erro ao carregar solicitações'); }
 }
 
-function abrirAprovarSolicitacao(id, nome, login, perfil, setor) {
+let solicitacoesData = [];
+
+function abrirAprovarSolicitacao(id) {
   solicitacaoCorrenteId = id;
-  document.getElementById('aprovar-sol-info').innerHTML =
-    `<strong>${nome}</strong><br>Login: <code>${login}</code> · Perfil: ${perfil}${setor ? ` · Setor: ${setor}` : ''}`;
+  const s = solicitacoesData.find(x => x.id === id) || {};
+  document.getElementById('aprovar-sol-info').innerHTML = `
+    <strong>${s.nome || '—'}</strong><br>
+    Matrícula: <code>${s.matricula || s.login || '—'}</code> &nbsp;·&nbsp;
+    CPF: <code>${s.cpf || '—'}</code><br>
+    Setor: ${s.setor || '—'}
+  `;
   abrirModal('modal-aprovar-sol');
 }
 
