@@ -823,6 +823,11 @@ app.get('/api/prazos', auth, async (req, res) => {
 // ════════════════════════════════════════════════════════════
 //  ROTAS — SOLICITAÇÕES DE ACESSO (público)
 // ════════════════════════════════════════════════════════════
+app.get('/api/public/setores', async (req, res) => {
+  try { res.json(await getSetores()); }
+  catch (e) { res.json([]); }
+});
+
 app.post('/api/public/solicitar-acesso', async (req, res) => {
   try {
     const { nome, login, matricula, cpf, setor, justificativa, perfil } = req.body;

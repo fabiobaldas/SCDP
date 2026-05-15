@@ -501,7 +501,7 @@
     </div>
     <div class="modal-body" id="sol-form-body">
       <p style="font-size:13px;color:var(--texto-sec);margin-bottom:20px;line-height:1.5">
-        Preencha seus dados abaixo. O administrador irá revisar e liberar seu acesso.
+        Preencha seus dados. O administrador irá revisar e liberar seu acesso.
       </p>
       <div class="form-group" style="margin-bottom:14px">
         <label style="font-size:11px;font-weight:600;color:var(--texto-sec);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">Nome do Servidor *</label>
@@ -518,8 +518,13 @@
         </div>
       </div>
       <div class="form-group" style="margin-bottom:4px">
-        <label style="font-size:11px;font-weight:600;color:var(--texto-sec);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">Setor / Secretaria *</label>
-        <input type="text" id="sol-setor" class="form-input" placeholder="Ex: Secretaria de Obras">
+        <label style="font-size:11px;font-weight:600;color:var(--texto-sec);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">Secretaria / Setor *</label>
+        <select id="sol-setor" class="form-input">
+          <option value="">— Carregando setores... —</option>
+        </select>
+        <div id="sol-setor-aviso" style="display:none;font-size:11px;color:var(--texto-ter);margin-top:4px">
+          Nenhum setor cadastrado. Aguarde o administrador configurar os setores do sistema.
+        </div>
       </div>
       <div id="sol-error" style="display:none;color:var(--vermelho);font-size:12px;margin-top:12px;padding:8px 12px;background:var(--vermelho-claro);border-radius:6px"></div>
     </div>
@@ -1960,13 +1965,31 @@ function maskCPF(el) {
   el.value = v;
 }
 
-function abrirModalSolicitarAcesso() {
-  ['sol-nome','sol-matricula','sol-cpf','sol-setor'].forEach(id => document.getElementById(id).value = '');
+async function abrirModalSolicitarAcesso() {
+  ['sol-nome','sol-matricula','sol-cpf'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('sol-error').style.display = 'none';
   document.getElementById('sol-form-body').style.display = '';
   document.getElementById('sol-sucesso').style.display = 'none';
   document.getElementById('sol-footer').style.display = '';
   abrirModal('modal-solicitar-acesso');
+
+  // Carrega setores via API pública (sem autenticação)
+  const sel = document.getElementById('sol-setor');
+  const aviso = document.getElementById('sol-setor-aviso');
+  sel.innerHTML = '<option value="">— Carregando... —</option>';
+  try {
+    const setores = await fetch('/api/public/setores').then(r => r.json());
+    if (!setores.length) {
+      sel.innerHTML = '<option value="">— Nenhum setor disponível —</option>';
+      aviso.style.display = 'block';
+    } else {
+      aviso.style.display = 'none';
+      sel.innerHTML = '<option value="">— Selecione sua secretaria / setor —</option>' +
+        setores.map(s => `<option>${s}</option>`).join('');
+    }
+  } catch (e) {
+    sel.innerHTML = '<option value="">— Erro ao carregar setores —</option>';
+  }
 }
 
 async function enviarSolicitacaoAcesso() {
@@ -1976,10 +1999,10 @@ async function enviarSolicitacaoAcesso() {
   const setor     = document.getElementById('sol-setor').value.trim();
   const errEl     = document.getElementById('sol-error');
   errEl.style.display = 'none';
-  if (!nome)      { errEl.textContent = 'Informe o nome do servidor.'; errEl.style.display = 'block'; return; }
-  if (!matricula) { errEl.textContent = 'Informe a matrícula.';        errEl.style.display = 'block'; return; }
-  if (!cpf)       { errEl.textContent = 'Informe o CPF.';              errEl.style.display = 'block'; return; }
-  if (!setor)     { errEl.textContent = 'Informe o setor.';            errEl.style.display = 'block'; return; }
+  if (!nome)      { errEl.textContent = 'Informe o nome do servidor.';       errEl.style.display = 'block'; return; }
+  if (!matricula) { errEl.textContent = 'Informe a matrícula.';              errEl.style.display = 'block'; return; }
+  if (!cpf)       { errEl.textContent = 'Informe o CPF.';                   errEl.style.display = 'block'; return; }
+  if (!setor)     { errEl.textContent = 'Selecione a secretaria / setor.';  errEl.style.display = 'block'; return; }
   try {
     await fetch('/api/public/solicitar-acesso', {
       method: 'POST',
