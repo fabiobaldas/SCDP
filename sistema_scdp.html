@@ -9,30 +9,117 @@
 </head>
 <body>
 
-<!-- ═══════════════ LOGIN ═══════════════ -->
+<!-- ═══════════════ LOGIN — SPLIT PANEL ═══════════════ -->
 <div id="login-screen">
-  <div class="login-card">
-    <div class="login-brasao">
-      <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
-        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
-        <polyline points="9 22 9 12 15 12 15 22"/>
-      </svg>
+
+  <!-- ── Painel esquerdo: formulário ── -->
+  <div class="login-form-panel">
+    <div class="login-form-inner">
+      <img src="logo_niteroi.png" alt="Prefeitura de Niterói" class="login-logo-pref">
+      <div class="login-form-titulo">Bem-vindo ao SCDP</div>
+      <div class="login-form-sistema">Diárias e Passagens</div>
+      <div class="login-form-sub">Insira suas credenciais para<br>acessar o sistema.</div>
+
+      <div class="login-error" id="login-error"></div>
+
+      <div class="field">
+        <label>Usuário</label>
+        <input type="text" id="login-user" placeholder="seu.login" autocomplete="username"
+          onkeydown="if(event.key==='Enter')document.getElementById('login-pass').focus()">
+      </div>
+      <div class="field">
+        <label>Senha</label>
+        <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password"
+          onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+
+      <button class="btn-login" id="btn-login" onclick="doLogin()">Acessar o Sistema</button>
+
+      <div style="text-align:center;margin-top:16px">
+        <a href="#" onclick="return false;" style="color:var(--azul);font-size:13px;text-decoration:none;font-weight:500">
+          Solicitar acesso ao sistema →
+        </a>
+      </div>
+
+      <div id="login-conn-status" style="margin-top:14px;font-size:12px;color:#6b7280;text-align:center;display:none"></div>
+
+      <div class="login-form-footer">
+        © 2026 Prefeitura Municipal de Niterói<br>
+        SMA — Secretaria Municipal de Administração
+      </div>
     </div>
-    <h1>SCDP</h1>
-    <p>Sistema de Concessão de Diárias e Passagens</p>
-    <div class="login-error" id="login-error"></div>
-    <div class="field">
-      <label>Usuário</label>
-      <input type="text" id="login-user" placeholder="seu.login" autocomplete="username">
-    </div>
-    <div class="field">
-      <label>Senha</label>
-      <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password">
-    </div>
-    <button class="btn-login" onclick="doLogin()">Entrar no sistema</button>
-    <div id="login-conn-status" style="margin-top:14px;font-size:12px;color:#6b7280;text-align:center;display:none"></div>
-    <button type="button" onclick="testarConexao()" style="margin-top:8px;width:100%;background:none;border:1px solid #d1d5db;border-radius:6px;padding:8px;font-size:12px;color:#6b7280;cursor:pointer">🔌 Testar conexão</button>
   </div>
+
+  <!-- ── Painel direito: branding + fluxo ── -->
+  <div class="login-brand-panel">
+    <div class="login-brand-grid"></div>
+
+    <div class="login-brand-tag">
+      <svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 8H3M17 8l-4-4M17 8l-4 4"/></svg>
+      Prefeitura de Niterói
+    </div>
+
+    <div class="login-brand-titulo">SCDP<br>Niterói</div>
+    <div class="login-brand-subtitulo">Sistema de Concessão de<br>Diárias e Passagens</div>
+
+    <div class="login-fluxo">
+      <div class="login-fluxo-item">
+        <div class="login-fluxo-num">1</div>
+        <div>
+          <div class="login-fluxo-nome">Solicitar Viagem</div>
+          <div class="login-fluxo-quem">Servidor abre o PCDP</div>
+        </div>
+      </div>
+      <div class="login-fluxo-item">
+        <div class="login-fluxo-num">2</div>
+        <div>
+          <div class="login-fluxo-nome">Reservar Passagem</div>
+          <div class="login-fluxo-quem">Secretaria reserva o transporte</div>
+        </div>
+      </div>
+      <div class="login-fluxo-item">
+        <div class="login-fluxo-num">3</div>
+        <div>
+          <div class="login-fluxo-nome">Aprovar Viagem</div>
+          <div class="login-fluxo-quem">Autorizador valida o pedido</div>
+        </div>
+      </div>
+      <div class="login-fluxo-item">
+        <div class="login-fluxo-num">4</div>
+        <div>
+          <div class="login-fluxo-nome">Emitir Bilhete</div>
+          <div class="login-fluxo-quem">Secretaria emite a passagem</div>
+        </div>
+      </div>
+      <div class="login-fluxo-item">
+        <div class="login-fluxo-num">5</div>
+        <div>
+          <div class="login-fluxo-nome">Pagar Diárias</div>
+          <div class="login-fluxo-quem">Secretaria efetua o pagamento</div>
+        </div>
+      </div>
+      <div class="login-fluxo-item">
+        <div class="login-fluxo-num">6</div>
+        <div>
+          <div class="login-fluxo-nome">Prestar Contas</div>
+          <div class="login-fluxo-quem">Servidor anexa comprovantes</div>
+        </div>
+      </div>
+      <div class="login-fluxo-item">
+        <div class="login-fluxo-num">7</div>
+        <div>
+          <div class="login-fluxo-nome">Aprovar Prestação</div>
+          <div class="login-fluxo-quem">Autorizador encerra o processo</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="login-brand-rodape">
+      SMA — Secretaria Municipal de Administração<br>
+      Coordenação de Modernização e Processos Administrativos
+    </div>
+  </div>
+
 </div>
 
 <!-- ═══════════════ APP ═══════════════ -->
