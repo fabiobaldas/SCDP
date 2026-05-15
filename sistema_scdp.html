@@ -638,13 +638,18 @@
 
       <div class="form-section">Dados da Viagem</div>
 
-      <!-- Toggle internacional -->
-      <div style="margin-bottom:14px">
-        <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:500;color:var(--texto)">
-          <input type="checkbox" id="pcdp-internacional" onchange="toggleInternacional()" style="width:16px;height:16px;accent-color:var(--primary);cursor:pointer">
-          Viagem Internacional
-        </label>
+      <!-- Seletor Nacional / Internacional -->
+      <div style="display:flex;gap:10px;margin-bottom:16px">
+        <button type="button" id="btn-nacional" onclick="setTipoViagem(false)"
+          style="flex:1;max-width:200px;padding:10px 16px;border-radius:8px;border:2px solid var(--primary);background:var(--primary);color:#fff;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:.15s">
+          🇧🇷 Nacional
+        </button>
+        <button type="button" id="btn-internacional" onclick="setTipoViagem(true)"
+          style="flex:1;max-width:200px;padding:10px 16px;border-radius:8px;border:2px solid var(--borda);background:#fff;color:var(--texto-sec);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:.15s">
+          🌍 Internacional
+        </button>
       </div>
+      <input type="checkbox" id="pcdp-internacional" style="display:none">
 
       <!-- Bloco doméstico: só UF -->
       <div id="bloco-domestico" class="form-row">
@@ -1481,8 +1486,7 @@ function abrirModalPcdp(pcdp = null) {
 
   // Internacional / Doméstico
   const isInt = !!(pcdp?.internacional);
-  document.getElementById('pcdp-internacional').checked = isInt;
-  _aplicarModoInternacional(isInt);
+  setTipoViagem(isInt);
   initUFSelect();
   initPaisIntSelect();
 
@@ -2414,12 +2418,23 @@ function initPaisIntSelect() {
 }
 
 function _aplicarModoInternacional(isInt) {
-  document.getElementById('bloco-domestico').style.display    = isInt ? 'none'  : '';
+  document.getElementById('bloco-domestico').style.display     = isInt ? 'none' : '';
   document.getElementById('bloco-internacional').style.display = isInt ? ''     : 'none';
+  // Estilo dos botões
+  const btnN = document.getElementById('btn-nacional');
+  const btnI = document.getElementById('btn-internacional');
+  if (btnN && btnI) {
+    btnN.style.background  = isInt ? '#fff'            : 'var(--primary)';
+    btnN.style.color       = isInt ? 'var(--texto-sec)': '#fff';
+    btnN.style.borderColor = isInt ? 'var(--borda)'    : 'var(--primary)';
+    btnI.style.background  = isInt ? 'var(--primary)'  : '#fff';
+    btnI.style.color       = isInt ? '#fff'             : 'var(--texto-sec)';
+    btnI.style.borderColor = isInt ? 'var(--primary)'  : 'var(--borda)';
+  }
 }
 
-function toggleInternacional() {
-  const isInt = document.getElementById('pcdp-internacional').checked;
+function setTipoViagem(isInt) {
+  document.getElementById('pcdp-internacional').checked = isInt;
   _aplicarModoInternacional(isInt);
   if (isInt) {
     initPaisIntSelect();
@@ -2427,6 +2442,10 @@ function toggleInternacional() {
   } else {
     document.getElementById('pcdp-pais').value = 'Brasil';
   }
+}
+
+function toggleInternacional() {
+  setTipoViagem(document.getElementById('pcdp-internacional').checked);
 }
 
 // ── LOGS ────────────────────────────────────────────────────
