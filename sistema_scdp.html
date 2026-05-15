@@ -738,7 +738,7 @@
             <ul id="aero-origem-lista" class="autocomplete-lista"></ul>
           </div>
           <div class="form-group" style="position:relative">
-            <label>Aeroporto de Destino <span style="font-size:10px;color:var(--primary);font-weight:500">• preenchido automaticamente</span></label>
+            <label>Aeroporto de Destino <span id="lbl-aero-destino-auto" style="font-size:10px;color:var(--primary);font-weight:500">• preenchido automaticamente para viagens nacionais</span></label>
             <input type="text" id="pcdp-destino-passagem" class="form-input" placeholder="Digite cidade, nome ou código (ex: BSB, Brasília...)"
                    autocomplete="off" oninput="buscarAeroporto('destino')" onblur="setTimeout(()=>fecharAutoAero('destino'),200)">
             <ul id="aero-destino-lista" class="autocomplete-lista"></ul>
@@ -1605,12 +1605,7 @@ async function preencherRotaPassagem() {
   if (dest.value) return; // não sobrescreve se já preenchido manualmente
 
   const isInt = document.getElementById('pcdp-internacional').checked;
-  if (isInt) {
-    const cidade  = document.getElementById('pcdp-cidade-int').value.trim();
-    const paisSel = document.getElementById('pcdp-pais-int');
-    const pais    = paisSel.options[paisSel.selectedIndex]?.text || '';
-    if (cidade || pais) dest.value = [cidade, pais].filter(Boolean).join(' — ');
-  } else {
+  if (!isInt) {
     const uf = document.getElementById('pcdp-uf').value;
     if (uf) {
       // Usa mapeamento local primeiro
