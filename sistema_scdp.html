@@ -637,22 +637,37 @@
       </div>
 
       <div class="form-section">Dados da Viagem</div>
-      <div class="form-row">
-        <div class="form-group" style="flex:0 0 190px">
-          <label>UF *</label>
+
+      <!-- Toggle internacional -->
+      <div style="margin-bottom:14px">
+        <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:500;color:var(--texto)">
+          <input type="checkbox" id="pcdp-internacional" onchange="toggleInternacional()" style="width:16px;height:16px;accent-color:var(--primary);cursor:pointer">
+          Viagem Internacional
+        </label>
+      </div>
+
+      <!-- Bloco doméstico: só UF -->
+      <div id="bloco-domestico" class="form-row">
+        <div class="form-group" style="max-width:280px">
+          <label>Estado (UF) *</label>
           <select id="pcdp-uf" class="form-input" onchange="onUFChange()">
-            <option value="">— Estado —</option>
+            <option value="">— Selecione o estado —</option>
           </select>
         </div>
-        <div class="form-group" style="position:relative">
-          <label>Cidade / Destino *</label>
-          <input type="text" id="pcdp-cidade" class="form-input" placeholder="Selecione o UF e digite a cidade..." autocomplete="off"
-                 oninput="filtrarCidades()" onfocus="filtrarCidades()" onblur="setTimeout(()=>fecharListaCidades(),180)">
-          <ul id="pcdp-cidade-lista" class="autocomplete-lista"></ul>
+        <input type="hidden" id="pcdp-pais" value="Brasil">
+      </div>
+
+      <!-- Bloco internacional: País + Cidade -->
+      <div id="bloco-internacional" class="form-row" style="display:none">
+        <div class="form-group" style="flex:0 0 260px">
+          <label>País *</label>
+          <select id="pcdp-pais-int" class="form-input" onchange="document.getElementById('pcdp-pais').value=this.options[this.selectedIndex].text">
+            <option value="">— Selecione o país —</option>
+          </select>
         </div>
-        <div class="form-group" style="flex:0 0 130px">
-          <label>País</label>
-          <input type="text" id="pcdp-pais" class="form-input" value="Brasil">
+        <div class="form-group">
+          <label>Cidade *</label>
+          <input type="text" id="pcdp-cidade-int" class="form-input" placeholder="Ex: Paris, Buenos Aires, Lisboa...">
         </div>
       </div>
       <div class="form-row">
@@ -1464,24 +1479,35 @@ function abrirModalPcdp(pcdp = null) {
     el.value = pcdp ? (pcdp[mapa[campo] || campo] || '') : '';
   });
 
-  // UF e Cidade
+  // Internacional / Doméstico
+  const isInt = !!(pcdp?.internacional);
+  document.getElementById('pcdp-internacional').checked = isInt;
+  _aplicarModoInternacional(isInt);
   initUFSelect();
-  const ufSel = document.getElementById('pcdp-uf');
-  const cidadeInput = document.getElementById('pcdp-cidade');
-  fecharListaCidades();
-  if (pcdp?.uf) {
-    ufSel.value = pcdp.uf;
-    // Cidade vem do campo destino (salvo como "Cidade — UF" ou só "Cidade")
-    const cidadeSalva = pcdp.destino ? pcdp.destino.replace(/\s*—\s*[A-Z]{2}$/, '') : '';
-    cidadeInput.value = cidadeSalva;
-  } else if (pcdp?.destino) {
-    // PCDP antiga sem campo uf — tenta extrair UF do destino "Cidade — UF"
-    const match = pcdp.destino.match(/^(.*?)\s*—\s*([A-Z]{2})$/);
-    if (match) { ufSel.value = match[2]; cidadeInput.value = match[1].trim(); }
-    else cidadeInput.value = pcdp.destino;
+  initPaisIntSelect();
+
+  if (isInt) {
+    // Internacional: destino = "Cidade — País"
+    const match = pcdp?.destino?.match(/^(.*?)\s*—\s*(.+)$/);
+    document.getElementById('pcdp-cidade-int').value = match ? match[1].trim() : (pcdp?.destino || '');
+    // Selecionar país
+    const paisNome = pcdp?.pais || (match ? match[2].trim() : '');
+    const sel = document.getElementById('pcdp-pais-int');
+    [...sel.options].forEach(o => { if (o.text === paisNome) o.selected = true; });
+    document.getElementById('pcdp-pais').value = paisNome;
   } else {
-    ufSel.value = '';
-    cidadeInput.value = '';
+    // Doméstico: uf salvo direto
+    const ufSel = document.getElementById('pcdp-uf');
+    if (pcdp?.uf) {
+      ufSel.value = pcdp.uf;
+    } else if (pcdp?.destino) {
+      // retrocompatível: "Rio de Janeiro — RJ"
+      const m = pcdp.destino.match(/—\s*([A-Z]{2})$/);
+      if (m) ufSel.value = m[1];
+    } else {
+      ufSel.value = '';
+    }
+    document.getElementById('pcdp-pais').value = 'Brasil';
   }
 
   // Pré-preencher dados do servidor logado em nova PCDP
@@ -1559,21 +1585,36 @@ function calcularTotal() {
 }
 
 async function salvarPcdp() {
-  const servidor = document.getElementById('pcdp-servidor').value.trim();
-  const setor    = document.getElementById('pcdp-setor').value;
-  const uf       = document.getElementById('pcdp-uf').value;
-  const cidade   = document.getElementById('pcdp-cidade').value.trim();
-  const destino  = cidade && uf ? `${cidade} — ${uf}` : (cidade || uf || '');
+  const servidor    = document.getElementById('pcdp-servidor').value.trim();
+  const setor       = document.getElementById('pcdp-setor').value;
+  const isInt       = document.getElementById('pcdp-internacional').checked;
+  let destino, uf, pais, internacional;
+
+  if (isInt) {
+    const cidade  = document.getElementById('pcdp-cidade-int').value.trim();
+    const paisSel = document.getElementById('pcdp-pais-int');
+    pais          = paisSel.options[paisSel.selectedIndex]?.text || '';
+    uf            = '';
+    internacional = true;
+    destino       = cidade && pais ? `${cidade} — ${pais}` : (cidade || pais || '');
+    if (!pais || pais === '— Selecione o país —') return toast('Selecione o país de destino');
+    if (!cidade) return toast('Preencha a cidade de destino');
+  } else {
+    uf            = document.getElementById('pcdp-uf').value;
+    pais          = 'Brasil';
+    internacional = false;
+    const nomeEstado = BR_LOCALIDADES.estados[uf] || uf;
+    destino       = uf ? `${nomeEstado} — ${uf}` : '';
+    if (!uf) return toast('Selecione o estado (UF) de destino');
+  }
+
   if (!servidor) return toast('Preencha o nome do servidor');
-  if (!uf)       return toast('Selecione o estado (UF)');
-  if (!cidade)   return toast('Preencha a cidade de destino');
 
   const dados = {
-    servidor, setor, destino, uf,
+    servidor, setor, destino, uf, pais, internacional,
     matricula: document.getElementById('pcdp-matricula').value.trim(),
     cargo: document.getElementById('pcdp-cargo').value.trim(),
     cpf: document.getElementById('pcdp-cpf').value.trim(),
-    pais: document.getElementById('pcdp-pais').value.trim() || 'Brasil',
     data_saida: document.getElementById('pcdp-data-saida').value,
     data_retorno: document.getElementById('pcdp-data-retorno').value,
     motivo: document.getElementById('pcdp-motivo').value.trim(),
@@ -2350,6 +2391,42 @@ function selecionarCidade(el) {
 function fecharListaCidades() {
   const lista = document.getElementById('pcdp-cidade-lista');
   if (lista) lista.style.display = 'none';
+}
+
+// ── INTERNACIONAL ───────────────────────────────────────────
+const PAISES = [
+  'África do Sul','Albânia','Alemanha','Angola','Arábia Saudita','Argentina','Austrália',
+  'Áustria','Bélgica','Bolívia','Canadá','Chile','China','Colômbia','Congo','Coreia do Sul',
+  'Cuba','Dinamarca','Egito','Emirados Árabes Unidos','Equador','Espanha','Estados Unidos',
+  'Etiópia','Filipinas','Finlândia','França','Gana','Grécia','Guatemala','Holanda','Honduras',
+  'Hungria','Índia','Indonésia','Irlanda','Israel','Itália','Jamaica','Japão','Jordânia',
+  'Líbano','Malásia','Marrocos','México','Moçambique','Nigéria','Noruega','Nova Zelândia',
+  'Panamá','Paraguai','Peru','Polônia','Portugal','Qatar','Reino Unido','República Checa',
+  'República Dominicana','Romênia','Rússia','Senegal','Singapura','Suécia','Suíça','Tailândia',
+  'Tanzânia','Turquia','Ucrânia','Uruguai','Venezuela','Vietnã','Zimbabwe',
+];
+
+function initPaisIntSelect() {
+  const sel = document.getElementById('pcdp-pais-int');
+  if (!sel || sel.options.length > 1) return;
+  sel.innerHTML = '<option value="">— Selecione o país —</option>' +
+    PAISES.map(p => `<option>${p}</option>`).join('');
+}
+
+function _aplicarModoInternacional(isInt) {
+  document.getElementById('bloco-domestico').style.display    = isInt ? 'none'  : '';
+  document.getElementById('bloco-internacional').style.display = isInt ? ''     : 'none';
+}
+
+function toggleInternacional() {
+  const isInt = document.getElementById('pcdp-internacional').checked;
+  _aplicarModoInternacional(isInt);
+  if (isInt) {
+    initPaisIntSelect();
+    document.getElementById('pcdp-pais').value = '';
+  } else {
+    document.getElementById('pcdp-pais').value = 'Brasil';
+  }
 }
 
 // ── LOGS ────────────────────────────────────────────────────
